@@ -1,0 +1,2095 @@
+\documentclass[a4paper,11pt]{book}
+
+\topmargin -1.5cm
+\textheight 26cm
+\textwidth 16.5cm
+ \oddsidemargin -1cm
+ \evensidemargin 0cm
+
+\usepackage[latin1]{inputenc}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{url}
+\usepackage{times}
+\usepackage{fancybox}
+\usepackage{epsfig}
+\usepackage{moreverb}
+\usepackage{graphics}
+
+%\usepackage[french]{babel}
+
+\def\srcpath{exemples}
+\def\programme#1{\bigskip
+\noindent \VerbBox{\shadowbox}{\begin{minipage}{0.96\textwidth}
+\small 
+\verbatiminput{\srcpath/#1}
+\end{minipage}
+\bigskip
+}}
+
+\def\code#1{\texttt{\small #1}}
+
+
+
+\newcommand{\magique}{\textsc{Magique}}
+\newcommand{\java}{\textsc{Java}}
+
+
+\thispagestyle{empty}
+\pagestyle{plain}
+
+
+\makeindex
+\begin{document}
+
+ 
+\begin{center}
+  \includegraphics[width=0.7\linewidth]{images/logoCRIStAL.png}
+\end{center}
+
+
+\vspace{4.0cm}
+{\Huge
+  \centerline{\textsc{Magique}}
+\LARGE  \centerline{\textsc{un tutoriel}}
+\Large
+  \vspace{2.0cm}
+  \centerline{\'Equipe SMAC}\centerline{\url{http://www.cristal.univ-lille.fr/SMAC/}}
+
+\vspace{1cm}
+  \centerline{Version 0.3.0.1}
+
+  \centerline{le 29/04/2016}
+}
+\vspace{4.5cm}
+
+\centerline{\copyright\  CRIStAL, Univeristé Lille 1}
+%\vfill
+\centerline{\bf UNIVERSITE LILLE 1}
+\centerline{U.F.R. d'I.E.E.A. B\^at. M3 -- 59655 VILLENEUVE D'ASCQ CEDEX}
+
+
+\newpage
+%-----------------------------------------------------------
+
+
+
+
+\newpage
+\tableofcontents
+\newpage
+
+\
+\vspace{5cm}
+\begin{center}
+  \textbf{\LARGE AVERTISSEMENT}
+\end{center}
+
+
+Ce document est un premier brouillon de ce qui deviendra un tutoriel
+pour \magique{} ce qui explique que certains passages doivent être
+fortement remaniés (le chapitre ``Introduction'' par exemple).
+
+Il a cependant le mérite d'exister et de faciliter une première mise
+en main de \magique{} en en présentant les principaux concepts.
+
+Vos remarques seront les bienvenues, elles nous permettront de
+l'améliorer d'autant plus efficacement. Envoyez les à~:
+\begin{center}
+  \url{XXX}
+\end{center}
+
+\bigskip
+
+\magique{} et quelques petits exemples sont récupérables à l'adresse~:
+\begin{center}  
+  \url{http://www.cristal.univ-lille.fr/MAGIQUE/}
+\end{center}
+
+
+
+\paragraph{Prérequis} On supposera que le lecteur est raisonnablement
+familier avec le langage \java{}, sans qu'il ait besoin d'en
+être un spécialiste.
+
+Il est fortement conseillé d'examiner la documentation de l'API en
+même temps que l'on consulte ce document, afin de pouvoir étudier les
+détails (la syntaxe précise par exemple) de chaque méthode ou classe qui
+ne seront pas nécessairement décrits ici.
+
+
+\newpage
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Introduction}
+
+
+\begin{itemize}
+  
+\item Qu'est-ce qu'un agent ?  \\
+  Un \textsl{agent} est une entité logicielle autonome et réactive. Il
+  possède ses propres connaissances et son propre savoir-faire qu'il
+  met au service des autres. Il a la capacité de communiquer que ce
+  soit avec d'autres agents ou un opérateur humain.
+  
+\item Qu'est-ce qu'un système multi-agents ? \\
+  Si la notion d'agent est discutable et discutée, celle de
+  \textsl{système multi-agents} est beaucoup plus claire : un système
+  multi-agents (ou SMA) est un ensemble d'agents logiciels ou humains
+  qui communiquent entre eux et travaillent ensemble pour résoudre un
+  objectif commun. Travailler ensemble signifie aussi bien collaborer
+  que négocier ou rivaliser selon le problème.
+  
+\item \magique{} est une API\footnote{Application Programming
+    Interface} \java{} qui permet de développer facilement des agents.
+  Selon les cas les agents peuvent tourner sur une même machine
+  ou sur des machines physiquement distribuées sur un réseau.
+  \magique{} est un environnement de développement pour SMA mais n'est
+  pas un SMA lui-même. \magique{} permet de masquer les aspect
+  techniques de communication entre agents, le multi-threading et la
+  gestion des flux. \magique{} banalise la communication entre agents
+  en permettant un appel ``à la cantonade''. Avec \magique, inutile de
+  savoir qui possède une compétence, il suffit de savoir qu'elle
+  existe. Cela permet une grande réutilisabilité des agents
+  indépendamment du contexte.
+
+\item \magique{} permet \textit{a priori}  de ne faire communiquer
+  que des agents issus de \magique.
+
+\end{itemize}
+
+
+\bigskip
+
+
+L'API \magique{} est fournie sous forme d'un package nommé
+\code{magique.jar}. Il est nécessaire que ce package soit placé dans
+le \code{CLASSPATH} de votre système. Imaginons que vous ayez créé à
+la racine de votre système un sous-répertoire nommé \code{smac}, il
+vous faudra entrer la commande~:
+
+\begin{itemize}
+\item Sous Unix \\
+  {\small \verb+setenv CLASSPATH=${CLASSPATH};/smac/magique.jar%$+}
+\item Sous Windows\\
+  {\small \verb+set CLASSPATH=%CLASSPATH%;\smac\magique.jar+ }
+\end{itemize}
+
+\bigskip
+
+
+Dans \magique{} les agents sont définis au sein d'une plate-forme
+d'accueil, la philosophie de la chose est d'avoir une plate-forme par
+machine (et donc tous les agents dans la même JVM\footnote{\java{}
+  Virtual Machine}), même si cela n'est pas une contrainte imposée.
+Schématiquement, une application \magique{} peut fonctionner selon deux
+modes d'exécution différents~:
+
+\begin{itemize}
+\item Centralisée \\
+  Dans ce cas, tous les agents lancés tournent dans la même plate-forme.
+\item Distribuée \\
+  Dans ce cas, des agents tournent sur des machines différentes. Il y a
+  alors une plate-forme  sur chaque machine et les agents distants
+  communiquent entre eux via leurs plates-formes respectives (grâce au
+  mécanisme RMI\footnote{Remote Method Invokation}). 
+  
+\end{itemize}
+
+Bien sûr, le mélange des genres est possible. On peut définir une
+application dans laquelle certains groupes d'agents sont sur la même
+machine (donc a priori dans la même plate-forme) et d'autres agents
+sont sur des machines différentes.
+
+\medskip
+
+Puisque la description d'un agent \magique{} se trouve dans une API, il
+est nécessaire, dès que l'on utilise l'une des classes de cette API,
+de déclarer dans le programme correspondant l'accès à cette classe.
+Tout code \java{} décrivant un agent \magique{} contiendra au
+moins la ligne \code{import fr.lifl.magique.*;} Nous verrons par la
+suite qu'il existe d'autres paquetages dans l'API qui contiennent
+notamment des utilitaires.
+
+\section{Survol et principaux concepts}
+
+\magique{} signifie ``\textsc{m}ulti-\textsc{ag}ent
+hiérarch\textsc{ique}'' (cf. \url{http://www.lifl.fr/SMAC}).
+\magique{} est à la base un modèle d'organisation d'agents qui propose
+une \emph{organisation} hiérarchique. Cette structure permet de proposer
+un mécanisme de délégation de com\-pé\-tences entre agents, facilitant
+ainsi le développement.
+
+Dans \magique{}, un agent est une entité possédant un certain nombre
+de compé\-tences. Ces compétences permettent à un agent de tenir un
+\emph{rôle} dans une application multi-agents. Les compétences d'un
+agent peuvent évoluer dynamiquement (par échanges entre agents) au
+cours de l'existence de celui-ci, ce qui implique que les \emph{rôles}
+qu'il peut jouer (et donc son statut) peuvent également évoluer au
+sein du SMA.  Un agent est construit dynamiquement à partir d'un agent
+élémentaire ``vide'', par enrichissement/acquisition de ses
+compétences.
+
+Du point de vue de l'implémentation, une compétence peut être perçue
+comme un composant logiciel regroupant un ensemble cohérent de
+fonctionnalités. Les com\-pé\-tences peuvent donc être développées
+indépendamment de tout agent et donc réutilisées dans différents
+contextes. Une fois ces compétences créées, la construction d'un agent
+\magique{} se fait très simplement par un simple mécanisme
+d'enrichissement de l'agent à construire avec ces compétences.
+L'ajout de nouvelles compétences (et donc fonctionnalités) dans une
+application SMA est donc facile.
+
+\par{} Concrètement, \magique{} existe sous la forme d'une \textsc{API}
+\textsc{java} permettant le dé\-ve\-lop\-pement de systèmes multi-agents
+(SMA) hié\-rar\-chiques. Dans ce cas, \magique{} correspond à un
+\emph{framework} générique pour le développement de SMA. Le concepteur
+de SMA peut donc s'appuyer sur les fonctionnalités offertes par
+\magique{} telles que la communication entre agents, la distribution
+de l'application, l'évolution dynamique, etc. Il a la charge de
+développer les \emph{compétences} applicatives dont il a besoin.
+
+Pour toute personne connaissant le langage \textsc{Java},
+l'apprentissage de \magique{} est très simple et l'utilisation de
+l'API permet de mettre en \oe{}uvre très rapidement et facilement des
+applications SMA distribuées. En outre, le mécanisme de délégation et
+la modularité induite par les compétences facilitent la
+réutilisabilité des agents et de leurs compétences dans différents
+contextes ou applications.
+
+Enfin un environnement graphique permet la création des agents et de
+la structure organisationnelle du SMA qui les regroupent ainsi que le
+déploiement et l'exécution de ce SMA sur un réseau de machines
+hétérogènes.
+
+\begin{itemize}
+\item plate-forme (agent plate-forme)
+\item agent
+\item compétence
+\item hiérarchie et SMA
+\item requêtes
+\end{itemize}
+
+
+ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Les premiers pas}
+
+\section{Au début était l'agent}
+
+Dans \magique{}, un agent est une instance de la classe
+\code{Agent}. Cela lui permet automatiquement d'avoir un
+agenda pour gérer ses communications, d'avoir le multi-threading pour
+fonctionner en parallèle avec ses semblables, de récupérer le
+dispositif de gestion des communications et de posséder des liens de
+communication vers l'extérieur.
+
+\bigskip
+
+Tout agent \magique{} doit être nommé. Cela se fait lors de la création
+de l'agent et donc dans son constructeur. Chaque agent doit contenir
+au moins un constructeur auquel on passe une chaîne de caractères
+contenant son nom. C'est par ce nom qu'il peut être identifié. Ce nom
+doit donc être unique dans le système constitué par l'ensemble de
+tous les agents, pour éviter toute ambiguïté de nommage\footnote{Pour
+  facilité cette unicité, le nom de l'agent est en fait défini par le
+  nom donné à sa création auquel on vient ajouter le nom (en fait
+  l'adresse IP) de la machine qui l'héberge et le numéro de port du
+  serveur RMI de la plate-forme - par défaut 4444. Le nom d'un
+  agent est donc de la forme \code{monDonné@hote.domain.pays:4444}.}.
+
+Le constructeur de l'agent doit impérativement appeler le constructeur
+de la super-classe \code{agent} en passant cette chaîne pour que
+l'agent soit bien connu du système.  On aura donc toujours dans le
+code d'une classe définissant un agent \code{MyAgent} quelque chose
+comme~: 
+
+\centerline{\code{public MyAgent(String name) \{ super(name);\}}}
+
+\bigskip
+
+En général, l'agent contient des méthodes\footnote{le terme exact que
+  nous devrions utiliser est ``\textsl{compétences}'' - cf.
+  chapitre~\ref{chap:competence} - mais pour ne pas troubler pour
+  l'instant le lecteur familiarisé avec la programmation objet, nous
+  conserverons dans un premier temps, le terme \textit{méthode}}
+réactives que d'autres agents peuvent appeler et une méthode
+pro-active, nommée le plus souvent \code{action} dans \magique{} par
+convention, qui contient la description de la tâche à accomplir par
+l'agent. On peut bien sûr construire des agents qui n'ont que des
+méthodes réactives, ou, par opposition uniquement une méthode
+pro-active. Tout est possible.
+
+\subsection{Premier agent~: première compétence}
+
+Afin de démarrer en douceur, commençons, comme il se doit, par créer
+une entité permettant d'afficher le message \code{"hello world"} à
+l'écran.
+
+Pour cela, il nous faut d'abord définir la compétence (nous
+détaillerons par la suite cette notion) pro-active contenant la
+méthode publique ``\code{action}'' pour l'agent. Cette compétence,
+appelée ici \code{MyAgentAction}, doit hériter de la classe
+\linebreak \code{MagiqueActionSkill}\footnote{Il existe deux autres
+  possibilités qui sont ``d'implémenter'' l'interface \code{Skill}
+  ou d'étendre la classe \code{ActionSkill}, nous détaillerons
+  ultérieurement les différences.}~:
+
+
+\programme{chap2/MyAgentAction.java}
+
+Ensuite, il faut créer l'agent. Dans \magique{} un agent doit
+obligatoirement être attaché à une \textsl{plate-forme} d'accueil.
+
+\subsection{Plate-forme}
+
+La plate-forme constitue en quelque sorte le support système de
+\magique{} et permet par exemple la gestion de la communication entre
+agents distants. Une plate-forme est un objet de la classe
+\code{Platform} du paquetage \code{fr.lifl.magique.platform}.
+
+Le principe est plutôt de n'avoir qu'une plate-forme par JVM et plus
+précisément par machine, celle-ci hébergeant alors tous les agents
+présent sur cet hôte.  Cependant rien n'empêche d'en mettre en
+route plusieurs sur une même machine\footnote{Cela peut par exemple
+  permettre de tester la distribution d'agents sans nécessairement
+  avoir plusieurs machines sous la main.} mais il faut alors les
+distinguer en précisant au constructeur de la plate-forme le numéro du
+port du serveur RMI.
+
+Un agent ne pouvant exister sans plate-forme, c'est celle-ci qui le
+crée. La méthode \code{createAgent} de \code{Platform} permet
+cela.
+
+% \medskip
+
+% Comme les agents peuvent tourner dans différents environnements
+% (centralisés, distribués) il est conseillé de ne pas mettre de méthode
+% \code{main} dans la classe de définition de l'agent. L'agent pourra
+% alors facilement être créé dans un \code{main} uniquement pour lui
+% seul s'il doit tourner seul dans sa \code{JVM}, ou dans un
+% \code{main} qui contient la création de plusieurs agents si on
+% souhaite le mettre avec d'autres dans une même \code{JVM}.
+
+\subsection{Premier programme}
+
+Nous savons donc créer un agent et disposons de sa compétence
+pro-active.  Mais il reste à la lui faire \textsl{acquérir}, cela est
+réalisé grâce à la méthode \code{setAction}.
+
+Il faut ensuite décider quand démarrer cette pro-activité. C'est la
+méthode \code{start} de l'agent qui permet de donner cet ordre de
+démarrage.  Un agent qui n'aurait pas de méthode pro-active mais
+uniquement des méthodes réactives ne doit pas ``exécuter''
+\code{start} pour fonctionner. Celle-ci sert uniquement à démarrer
+la méthode \code{action} (penser à la méthode \code{run} de
+\code{Thread}).
+
+Comme pour le langage \java{}, les programmes \magique{} ont besoin d'un
+``main'' pour s'exécuter. Le \code{main} \java{} permet la
+création de la JVM, le main \magique{} permettra la création de la
+plate-forme déjà mentionnée. \magique{} étant une surcouche
+de \java{}, il faudra cascader les deux ``main''. Ceci sera fait
+automatiquement, il suffit de respecter le schéma suivant~:
+\begin{itemize}
+\item créer comme main \magique{} une classe héritant de
+  \linebreak\code{fr.lifl.magique.AbstractMagiqueMain}
+\item vous devez concrétiser la méthode abstraite
+  \code{theRealMain(String[] args)}, dans le corps de cette méthode
+  vous placez ce que vous voulez voir faire par le programme. Entre
+  autre la création des agents (qui sera automatiquement réalisée par
+  la plate-forme) et leur acquisition de compétences,
+\item créer le main \java{} qui appelle la méthode statique \code{go} de
+  la classe \linebreak\code{fr.lifl.magique.Start} avec comme argument le nom
+  de la classe contenant le \code{theRealMain} \magique{} à
+  exécuter. L'exécution de cette méthode créera la plate-forme et
+  lancera la méthode \code{theRealMain}.
+
+  On peut préciser comme paramètre à cette méthode, un port RMI
+  différent du port par défaut pour la plate-forme ainsi qu'un tableau
+  de paramètres sous forme de chaînes de caractères pour
+  \code{theRealMain}
+
+  Cette dernière étape peut être ignorée si l'on utilise le main de la
+  classe \linebreak\code{fr.lifl.magique.Start} avec comme argument la classe
+  contenant \linebreak\code{theRealMain} et, de manière optionnelle, le numéro
+  de port et/ou un tableau d'arguments (comme précédemment).
+\end{itemize}
+
+Voici donc le premier programme \magique{}~:
+
+\programme{chap2/BasicAgentImp.java}
+
+Maintenant que toutes les classes nécessaires à cette petite
+application sont écrites, il nous reste à effectuer la compilation
+puis l'exécution.
+
+\begin{itemize}
+\item \code{javac chap2/BasicAgentImp.java}  \\
+  permet d'effectuer la compilation de la classe \code{BasicAgentImp}
+  ainsi que la compilation des classes nécessaires, donc de
+  \code{MyAgentActionSkill}\footnote{pour cela vous assurer que le
+    paquetage \code{chap2} est dans votre \code{CLASSPATH}, ou bien
+    dans la mesure ou le répertoire courant (``\code{.}'') est la
+    plupart du temps dans le \code{CLASSPATH}, placez vous dans le
+    répertoire parent de \code{chap2} et compilez par \code{javac
+      chap2/BasicAgentImp.java}}.
+
+\item et pour exécuter notre petit programme.
+  \begin{itemize}
+  \item \code{java chap2.BasicAgentImp} 
+  \item \code{java fr.lifl.magique.Start chap2.BasicAgentImp}\\
+    et dans ce cas pas de \code{main} nécessaire dans le fichier
+    \code{BasicAgentImp.java}
+  \end{itemize}  
+\end{itemize}
+
+Il est important de noter qu'un agent n'est pas un objet. Une fois le
+message affiché, l'agent ne s'arrête pas a priori ! Il est persistant
+et attend la suite des événements. Celui-ci étant pour l'instant seul
+au monde, il ne lui arrivera plus grand chose, vous pouvez (pour
+l'instant) donc l'arrêter par un \textsc{Ctrl-c} d'une grande
+élégance. D'une manière générale, notez bien que la fin de la méthode
+\code{action} ou d'une quelconque autre compétence de l'agent ne
+signe pas l'arrêt de mort de celui-ci.
+
+ 
+\section{Puis ils furent deux et communiquèrent.}
+
+Un système multi-agent commence à deux agents, et dès qu'il y en a
+deux, il faut leur permettre de communiquer. Il est donc nécessaire de
+les mettre en relation (les ``connecter'') et ensuite de leur
+permettre de s'envoyer des messages (nous diront aussi requêtes pour
+éviter une connotation trop objet). \magique{} dispose d'un certain
+nombre de primitives de requêtes que nous présenterons
+progressivement.
+
+Le moyen le plus simple de  mettre en relation deux agents
+est de les connecter directement entre eux.
+
+\subsection{Connexion directe}
+
+Quand plusieurs agents sont connectés entre eux, ils peuvent exploiter
+leurs mé\-thodes (compétences~!) respectives grâce à la méthode
+\code{perform()} de la classe \code{Agent}. Dans le cas d'une connexion
+directe ente deux agents, \code{perform} nécessite comme argument le
+nom de l'agent destinataire et une chaîne de caractères contenant le
+nom de la méthode à appeler, plus des éventuels arguments qui doivent
+impérativement être des objets (i.e. pas de type primitif). Les
+arguments peuvent être passés par l'intermédiaire d'un tableau
+d'objets, soit être énumérés, si il y en a moins de quatre.
+
+\bigskip
+
+Afin d'illustrer notre propos, continuons sur les exemples d'école. La
+première application répartie effectuée dans les livres d'initiation
+consiste à écrire deux entités qui communiquent pour un semblant de
+jeu de Ping-Pong. Un agent sait faire \code{ping} qui consiste à
+afficher le message ``\code{ping}'' à l'écran et un agent sait faire
+\code{pong} qui consiste à afficher le message ``\code{pong}'' à
+l'écran. \`A chaque fois que l'un des agents exécutent sa méthode
+(\code{ping} ou \code{pong}) il invoque ensuite la méthode
+correspondante chez son collègue, pour lui ``renvoyer la balle''.
+Notons qu'ici les agents sont purement réactifs et qu'ils n'ont pas de
+but en soi, donc pas de méthode \code{action} particulière. Par
+contre nous avons besoin de deux compétences~: une compétence ``faire
+ping'' et une ``faire pong''...  On obtient donc pour la compétence
+\code{PingSkill}\footnote{Cette compétence hérite de la classe
+  \code{MagiqueDefaultSkill}, comme pour les compétence pro-active,
+  nous détaillerons plus tard le autres possibilités qui sont
+  l'``implémentation'' de l'interface \code{Skill} et l'héritage de
+la classe \code{DefaultSkill}} :
+
+\programme{chap2/PingSkill.java}
+
+et de la même manière pour la compétence \code{PongSkill}:
+
+\programme{chap2/PongSkill.java}
+
+Une fois nos deux compétences écrites (les agents sont induits car il
+suffira d'en créer deux ``creux'' et de leur enseigner ces
+compétences), il nous reste à écrire une application \magique{} qui
+les crée et les relie entre eux pour qu'ils puissent communiquer.
+
+Nous décrivons donc une méthode \code{theRealMain} qui crée les deux
+agents \code{"ping"} et \code{"pong"}, leur enseigne leur
+compétence et les connecte grâce à la méthode \linebreak\code{connectTo}, puis
+lance le jeu en demandant l'exécution de la compétence \code{ping}.
+Ici les deux agents tournent donc sur la même plate-forme (et donc
+dans la même JVM).
+
+\programme{chap2/TestPingPong.java}
+
+Maintenant que nos trois classes sont écrites nous pouvons effectuer
+la compilation et l'exécution de notre application Ping-Pong.
+
+\begin{itemize}
+\item \code{javac TestPingPong.java}  \\
+  Pour effectuer la compilation de la classe \code{TestPingPong}
+  ainsi que la compilation des classes nécessaires (donc de
+  \code{PingSkill} et \code{PongSkill}).
+\item \code{java fr.lifl.magique.Start chap2.TestPingPong} \\
+  Pour exécuter notre petite application.
+\end{itemize}
+
+Comme pour la précédente application, celle-ci ne s'arrête jamais
+puisque pour l'instant rien n'est prévu pour arrêter l'application.
+Effectuez un \textsc{Ctrl-c} du plus bel effet pour tout stopper.
+
+\bigskip
+
+Cependant, cette approche comporte certains inconvénients. On le voit
+dans la méthode \code{ping}, de la com\-pé\-tence \code{PingSkill}, il
+y a une invocation \textbf{explicite} d'un agent dénommé
+\code{"agentPong"} et qui doit pouvoir exploiter pour nous une
+compétence \code{pong}. Donc tout agent possédant cette compétence
+ne pourra fonctionner que si il est connecté à un agent nommé
+\code{superPong}... La présence d'un agent possédant la compétence
+\code{PongSkill} mais porteur d'un autre nom, ne serait d'aucune
+utilité pour notre agent \code{Ping}, bien qu'il serait tout aussi
+capable de répondre à la requête...
+
+De plus, on devine bien qu'apparaît ici le problème de la
+réutilisabilité dans différents contextes (c'est-à-dire différentes
+applications multi-agents) d'agents possédant la com\-pé\-tence
+\code{PingSkill}. Car en fait ce qui est le plus
+souvent\footnote{pas toujours} important pour un agent \code{ping},
+c'est plus qu'il existe un autre agent susceptible de répondre à sa
+requête d'exé\-cu\-tion d'un \code{pong}, que de savoir que cet agent
+s'appelle nécessairement \code{agentPong}...
+
+C'est pourquoi \magique{} propose un mécanisme basé sur l'utilisation
+d'un agent appelé \textit{superviseur} qui va mettre en liaison
+différents agents compétents et permettre une invocation de méthode
+(compétence) sans nécessairement se préoccuper de qui la possède.
+
+
+\subsection{Utilisation d'un superviseur}
+
+Nous allons reprendre l'exemple précédent mais en reliant cette fois
+nos deux agents à un superviseur.
+
+Le superviseur est un agent comme les autres excepté le fait qu'il a
+la responsabilité de la communication entre les agents qu'il gère. La
+définition d'un agent superviseur se fait par ralliement d'au moins un
+autre agent à celui-ci. Ce ralliement se fait par la méthode
+\code{connectToBoss()} de la classe \code{Agent}.  Quand plusieurs
+agents sont reliés à un superviseur, ils peuvent faire des requêtes
+sur leurs méthodes respectives grâce à la méthode \code{perform} de
+la classe \code{Agent}. \code{perform}, dans sa forme la plus
+simple, nécessite comme argument une chaîne de caractères contenant le
+nom de la méthode à appeler. Vous n'avez pas à vous soucier de savoir
+qui va l'exécuter, c'est le superviseur qui s'en charge.
+
+\medskip
+
+Le superviseur n'a pas besoin d'être un agent complexe pour effectuer
+ce travail de communication. Il en possède les capacités simplement
+puisque il est un agent (i.e. ``instance ce de \code{Agent}'')! Il
+est donc possible pour gérer les communications entre agents
+d'utiliser un superviseur qui n'a pas de compétence particulière (i.e.
+autres que celles par défaut de tout agent, comme la communication,
+l'interprétation de requêtes, etc.).
+
+
+\medskip
+
+Les compétences \code{PingSkill2} et \code{PongSkill2} sont
+quasiment identiques aux pré\-cé\-dentes \code{PingSkill} et
+\code{PongSkill}, à un détail près~: les paramètres de la méthode
+\code{perform} où il n'est plus nécessaire de préciser l'agent
+destinataire. Donc pour la compétence \code{PingSkill2}~:
+
+\programme{chap2/PingSkill2.java}
+
+et de la même manière pour la compétence \code{PongSkill2}:
+
+\programme{chap2/PongSkill2.java}
+
+Comme nous l'avons dit, il nous faut attacher ces agents à un
+superviseur qui gérera leurs communications. Ici le superviseur n'a
+\textit{a priori} rien d'autre à faire que de gérer les
+communications, il est donc constitué d'un agent complètement vide
+(i.e. sans compétence particulière).
+
+Il nous faut donc écrire une application qui crée nos agents, les place
+dans une plate-forme et les relie entre eux pour qu'ils puissent
+communiquer. Nous décrivons donc une méthode \code{theRealMain} qui crée
+les trois agents, connecte cette fois-ci les deux agents
+\code{"agentPing"} et \code{"agentPong"} au troisième agent qui
+fera office de superviseur, puis lance le jeu en demandant l'exécution
+de la méthode \code{ping()} (qui peut être ``appelée'' via
+\code{perform} par n'importe lequel des agents sans que cela ait de.
+
+\programme{chap2/TestPingPong2.java}
+
+
+La compilation et l'exécution se déroule de la même manière que pour
+la version précédente (et il faut toujours un \code{Ctrl+C} pour
+l'interrompre.\bigskip
+
+Le fonctionnement est en apparence le même mais on comprend que cette
+fois, le nom de l'agent possédant la compétence \code{pong} (resp.
+\code{ping}) n'est plus important, l'important c'est qu'il existe un
+agent capable de faire un \code{pong} (i.e. compétent). Pour le
+vérifier, il vous suffit de changer le nom des agents dans le
+\code{main} précédent, de le recompiler et de relancer
+l'application. Tout se passe de la même manière... Ce qui n'est pas le
+cas si vous faites de même avec la première version.
+
+On comprend bien que l'on a gagné en réutilisabilité de la compétence
+\linebreak\code{PingSkill2}, dont le seul prérequis à son ``bon
+fonctionnement'' est l'existence d'un agent (éventuel\-lement le même)
+sachant faire \code{pong}, qui qu'il soit...
+
+\bigskip Nous devons cependant expliquer comment il est possible de
+faire une requête à une ``méthode'' sans préciser qui doit
+l'accomplir. Cela est évidemment rendu possible par la présence du
+superviseur, qui crée une structure hiérarchique pour les agents et
+gère le routage des messages entre agents. C'est l'objet du paragraphe
+suivant.
+
+\section{Le routage des messages}
+
+Lorsqu'un agent \magique{} appelle une méthode par \code{perform}, le
+routage se fait de la manière suivante :
+
+\begin{itemize}
+\item L'agent regarde s'il connaît cette méthode. Si oui il l'exécute.
+\item Si non, il regarde si il a une équipe à sa charge (s'il est
+  superviseur) dont l'un des agents possède la compétence recherchée,
+  cet agent peut être présent à une profondeur quelconque de la
+  hiérarchie qu'il contrôle.  Si c'est le cas il transmet la requête à
+  l'un des agents situé immédiatement en-dessous de lui et qui
+  contrôle une sous-hiérarchie dans laquelle se trouve (au moins) un
+  agent compétent (éven\-tuel\-lement cet agent lui-même). Cet agent
+  répète alors le même processus.
+\item S'il n'y en a aucun, il transmet la requête à son propre
+  superviseur qui effectue le même raisonnement ... et ainsi de suite.
+\item Enfin le dernier cas, s'il est lui même le big boss (la racine
+  de la hiérarchie) et qu'il n'y a donc pas (encore) d'agent compétent
+  dans cette hiérarchie, il met la requête en attente jusqu'à ce qu'un
+  agent compétent rejoigne la structure ou qu'un agent déjà présent
+  apprenne la compétence requise.
+\end{itemize}
+
+Cela amène une remarque importante quant à la conception
+d'applications \magique. Si, dans un \code{perform}, une erreur se
+glisse dans le nom de la méthode appelée, aucune erreur ni de
+compilation, ni d'exécution ne se produira~! Cette requête sera
+simplement mise en attente d'un nouvel arrivant ou l'acquisition d'une
+nouvelle compétence. Ce sont des agents, pas des objets~!
+
+\bigskip
+
+Nous avons choisi ici de lancer l'application dans le \code{main}
+par l'appel à \linebreak\code{sup.perform("ping")}. Grâce au système de routage
+de \magique, n'importe quel autre agent du système aurait donc aussi
+pu être utilisé. Cette instruction peut donc être remplacée par 
+\code{pong.perform("ping")} ou \code{ping.perform("ping")} sans aucun
+problème de fonctionnement.
+
+\bigskip
+
+D'une manière identique, nous avons décidé d'utiliser un superviseur
+vide et de lancer l'application dans le \code{main}. Il est bien sûr
+possible de lancer l'application dans la méthode \code{action} du
+superviseur ou même de l'un des agents (cette vision correspond
+d'ailleurs plus à la philosophie de la chose, même si ici, il est sans
+doute un peu fort de parler de pro-activité). Dans ce cas, il faut
+effectuer un \code{start} de l'agent concerné dans le main pour que
+sa méthode \code{action} soit exécutée.
+
+\bigskip
+
+Enfin, nous avons choisi un superviseur vide pour relier les deux
+autres agents. Il est tout à fait possible de lui faire faire une
+action, et pourquoi pas, l'action \code{pong}. Le superviseur traite
+alors \code{pong} et l'autre agent traite la méthode \code{ping}.
+On passe d'une application à trois agents, à une application à deux
+agents. C'est au concepteur de l'application de choisir la répartition
+qui lui semble la plus adaptée : trois ou deux agents, superviseur vide
+ou pas, c'est un choix de conception, pas une contrainte de \magique.
+Notre application précédente pourrait donc être écrite ainsi~:
+
+d'abord la compétence pro-active du superviseur~:
+
+\programme{chap2/SuperPingAction.java}
+
+et pour \code{theRealMain} ...
+
+\programme{chap2/TestPingPong3.java}
+
+L'agent \code{pong} ne change pas par rapport à la version précédente.
+
+
+\section{Le système de trace}
+
+Du fait du concept de fonctionnement d'un agent qui doit être autonome
+et réactif, la mise à point d'une application n'est pas toujours
+aisée.  Nous l'avons dit, une erreur dans le nom de la méthode appelée
+par un \code{perform} n'a aucune incidence ni à la compilation, ni à
+l'exécution. Il est donc parfois utile (pour savoir si un agent s'est
+bien connecté à son superviseur, pour savoir si un agent a bien envoyé
+un message ou pour savoir si un agent a bien reçu le message qui lui
+était destiné) d'avoir une trace du fonctionnement des agents.
+
+\medskip
+
+L'API \magique{} contient pour cela une méthode statique de la classe
+\code{Agent} nom\-mée \code{setVerboseLevel} qui a pour paramètre un
+entier indiquant le niveau de trace. Il existe différents niveaux
+utilisés par l'API de 1, quasi muet, à 5, pour le plus bavard.
+
+Chaque \code{main} implémentant une application \magique{} peut donc
+inclure une instruction de la forme
+\code{Agent.setVerboseLevel(2);} pour activer la trace
+dans la JVM correspondante.
+
+\medskip 
+
+Une solution plus élégante consiste à autoriser un paramètre au
+lancement de l'agent et l'utiliser pour affecter le niveau de trace.
+De cette manière, sans changer le code de l'agent ni recompiler quoi
+que ce soit, il est possible de lancer une exécution avec le niveau de
+trace souhaité. Dans un tel cas, la méthode \code{theRealMain} contiendra
+une instruction de la forme~:
+
+{\small
+\begin{verbatim}
+     if (args.length==1) 
+        Agent.setVerboseLevel(Integer.parseInt(args[0]));
+\end{verbatim}
+}
+
+L'argument du main \java{} étant passé au \code{theRealMain} \magique{}.
+
+\paragraph{Remarque. } Notons que pour ``tracer'' les problèmes dus à
+une mauvaise orthographe des noms de méthodes, un message apparaît dès
+le niveau de trace 2 indiquant une méthode inconnue dans la
+hiérarchie. Il est cependant important de ne pas oublier lors de
+l'apparition de ce message, que le statut ``\code{unknown}'' d'une
+requête peut évoluer lors de l'arrivée d'un nouvel agent ou
+l'acquisition d'une nouvelle compétence dans le SMA. Ce message ne
+correspond donc pas nécessairement à une erreur, il indique simplement
+qu'à cet instant précise, il n'y a pas d'agent compétent connu dans la
+hiérarchie. Il ne faut donc pas être nécessairement surpris si ce
+message se produit lors de la création de la hiérarchie alors que les
+agents ne sont pas nécessairement encore tous activés et connectés.
+
+\section{Enfin les agents s'éloignèrent.}
+
+Jusqu'à présent, tous les agents fonctionnaient dans la même
+plate-forme et donc sur la même machine hôte. Dans de nombreuses
+applications multi-agents, il est nécessaire de répartir les agents
+sur le réseau.  Par exemple en plaçant un agent par machine.
+
+\bigskip
+
+Les agents étant alors distribués, il est nécessaire au moment
+du rattachement d'un agent à son superviseur de préciser la
+localisation de celui-ci. Cela se fait en précisant l'adresse IP (et
+le port) de la plate-forme sur laquelle on peut le trouver.
+
+En fait la méthode \code{connectToBoss} que nous avons déjà utilisée,
+permet la connexion distante d'agents. Si nous n'en avons pas encore
+pris conscience, c'est parce que nous avons utilisé sans le dire
+certaines facilités syntaxiques permises par l'API \magique{}. En
+effet, nous avons vu que les méthodes de connexion prennent pour
+argument le nom de l'agent auquel on se connecte. Or comme nous avons
+déjà eu l'occasion de le signaler rapidement, le nom réel des agents
+n'est pas celui fourni à la création mais celui-ci se voit étendu par
+le nom de l'hôte et le port de la plate-forme. Ainsi l'agent de nom
+\code{superPing} créé sur une plate-forme de port \code{4444} (valeur
+par défaut) sur un hôte appelé \code{host.domain.fr} par exemple a pour
+nom réel : \linebreak\code{"superPing@host.domain.fr:4444"} (on peut
+avoir le numéro IP à la place du nom d'hôte - ``\textit{hostname}'').
+L'utilisation du nom court (le nom donné à la création) n'est qu'une
+facilité exploitable lorsque les agents sont sur la même plate-forme.
+D'ailleurs d'un point de vue ``propreté'' de conception, il faudrait
+en fait utiliser systématiquement le nom complet (le vrai nom quoi).
+
+La connexion à un superviseur ressemble donc à~:
+
+
+\begin{quote}
+       \code{connectToBoss("nomSuperviseur@machine.reseau.pays:port");}
+\end{quote}
+
+À partir de ce nom passé en paramètre, \magique{} peut donc facilement
+localiser l'agent et ainsi réaliser la connexion même distante. Donc
+pour conclure~: qu'un agent veuille prendre contact avec un agent
+local ou un agent distant, cela est transparent, il procède exactement
+de la même manière.
+
+\bigskip
+
+Il nous est donc maintenant possible de distribuer notre Ping-Pong.
+
+
+Les compétences \code{PingSkill} et \code{PongSkill} ne changent
+pas. Si nous voulons lancer chacun de ces agents sur une machine
+différente, il faut bien sûr un \code{theRealMain} différent pour chacun
+d'entre eux. 
+
+\programme{chap2/SuperImp.java}
+
+Le \code{main} pour chacun des deux autres agents décrit la
+connexion au superviseur en utilisant la notation longue. 
+
+\programme{chap2/PongImp.java}
+
+\paragraph{Remarque. } Si vous voulez pouvoir faire tourner ces
+programmes sur une seule machine, il est nécessaire de préciser des
+ports différents pour le serveur RMI.
+
+\par{} Il reste à compiler ces trois implémentations de nos agents et les
+lancer sur trois machines (ou trois JVM pour tester sur une seule
+machine) différentes pour apprécier cette magnifique partie de
+Ping-Pong.
+
+
+\begin{itemize}
+  
+\item \code{javac SuperImp.java} pour compiler le superviseur et son
+  implémentation.
+\item \code{javac PingImp.java} et \code{javac PongImp.java} pour
+  compiler nos deux agents réactifs et leurs implémentations
+  respectives.
+\item \code{java fr.lifl.magique.Start chap2.SuperImp}. .
+
+  (ou \code{java fr.lifl.magique.Start chap2.SuperImp 4444 3} pour
+  avoir un niveau de verbose de 3 (passé comme premier argument à
+  \code{theRealMain}, ici comme nous l'avons précisé, le numéro de
+  port (4444) doit être indiqué car l'argument (3) est un entier)
+  
+\item \code{java fr.lifl.magique.Start chap2.PingImp superHost:4444}
+  sur une seconde machine différente du réseau avec
+  \code{superHost:4444} qui est le nom IP de la machine sur laquelle a
+  été lancé \code{SuperImp} suivi du port de la plate-forme
+  
+  (ou \code{java fr.lifl.magique.Start chap2.PingImp 5555
+    superHost:4444} sur la même machine mais dans un shell séparé pour
+  les tests, on peut également préciser un numéro de verbose)
+
+  (ou encore \code{java fr.lifl.magique.Start chap2.PingImp
+    superHost:4444 3} pour un niveau de verbose de 3)
+
+\item \code{java fr.lifl.magique.Start chap2.PongImp superHost:4444}
+  sur une troisième machine différente du réseau
+  
+  (ou \code{java fr.lifl.magique.Start chap2.PongImp 6666
+    superHost:4444} sur la même machine mais dans un shell séparé pour
+  les tests)
+\end{itemize}
+
+
+\section{Les erreurs classiques}
+
+Arrivé à ce niveau d'utilisation de Magique, vous allez être
+confrontés à vos premières erreurs d'écriture. Les erreurs peuvent
+avoir différentes origines : 
+
+\begin{itemize}
+\item Les erreurs \java{}. \\
+  En général, le compilateur \java{} fait bien son travail. Une ou
+  plusieurs erreurs apparaissent à la compilation et elles sont
+  normalement suffisamment explicites pour vous guider vers la
+  solution.
+
+  \begin{itemize}
+   \item Le classpath n'est pas correct \\
+     \code{Package fr.lifl.magique not found in import}
+   \item J'ai oublié le \code{import} magique dans mon fichier \\
+     \code{Undefined variable or class name: Agent}
+     
+   \item Un type primitif (\code{int,char,double}) est utilisé dans
+     une des méthodes de communication \magique. Rappelons que seuls
+     des objets sérialisables peuvent être paramètre de requêtes.
+   \end{itemize}
+
+   
+ \item Les erreurs de logique et de conception de l'application. \`A ce
+   stade, nous ne pouvons plus rien pour vous. L'erreur dépend de
+   votre application, de ce que vous souhaitez obtenir, du choix de
+   décomposition des agents que vous avez choisi, bref, vous êtes le
+   seul à savoir.
+   
+ \item Les erreurs d'utilisation de l'API.
+  
+   Ces erreurs sont plus difficiles à détecter car aucun message
+   d'erreur n'est affiché.
+
+  \begin{itemize}
+  \item Une classe de compétence doit toujours être déclarée avec
+    l'attribut \code{public}. Si ce n'est pas le cas, les autres
+    agents ne peuvent pas accéder aux méthodes de cette compétences.
+    Un niveau 3 de \code{verbose} vous permet de voir que le message
+    est bien parti d'un agent mais n'a jamais été traité par le
+    destinataire.
+  
+  \item Le nom d'une méthode utilisé dans un \code{ask} ou un
+    \code{perform} est erroné. Rappelons la philosophie \magique{}~:
+    un agent est persistant et il apprend tout au long de sa vie. Si
+    il ne sait pas traiter une méthode aujourd'hui, peut-être en sera
+    t-il capable demain. Il n'y a donc aucune raison de provoquer une
+    erreur quand un nom de méthode inconnu survient (contrairement à
+    la programmation objets). L'agent \magique{} stocke cette requête
+    en attendant des jours plus heureux. Si un jour, cette méthode
+    devient connue de l'agent, elle sera exécutée.  Un niveau 2 de
+    \code{verbose} vous permet de voir qu'une requête est inconnue
+    dans le SMA à l'instant où elle est traitée et qu'elle est donc
+    mise en attente. Attention cela ne correspond pas nécessairement à
+    une erreur.
+    
+  \item Une erreur dans le nom de la machine utilisé dans le
+    \code{connectToBoss}. En exécution distribuée le nom de machine
+    utilisé dans le \code{connectToBoss} doit évidemment
+    correspondre à la machine sur laquelle le superviseur associé a
+    effectivement été lancé. 
+    
+    Il est plus conseiller de passer le nom de machine des
+    \code{connectTo...} en paramètre des ``\code{theRealMain}'' afin
+    de faciliter le changement de machine support.
+
+    Un niveau 5 de \code{verbose}
+    vous permet de voir que le message est bien parti d'un agent mais
+    n'a jamais été traité par le destinataire.
+
+  \end{itemize}
+
+\end{itemize}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{La notion de service}
+\label{chap:competence}
+
+L'approche agent réclame qu'un agent doit pouvoir changer de
+comportement et donc modifier dynamiquement l'ensemble de ses
+compétences (en en rajoutant ou en enlevant par exemple). C'est
+pourquoi \magique{} contient la notion de service ou de compétence.
+
+Une compétence est un ensemble de fonctionnalités qui peuvent être
+exploitées par un agent. Nous voulons que tout soit exprimable en
+terme de compétences, même la manière de gérer les compétences
+elles-mêmes.
+
+D'un point de vue plus pragmatique, une compétence devrait être vue
+comme un composant dont l'interface publique désigne les capacités
+qu'un agent peut exploiter.
+
+\bigskip
+
+La granularité et le degré de complexité d'une compétence ne
+peuvent pas être définitivement énoncés.
+
+La capacité d'analyser un message XML ou la capacité d'additionner
+deux entiers peuvent chacune représenter une compétence bien que leurs
+complexités seraient très probablement considérées comme se situant à
+des niveaux différents.
+
+De plus, savoir si il faut grouper dans une seule compétence les
+quatre opérations arithmétiques de base (addition, soustraction,
+multiplication et division) ou les séparer en quatre compétences ne
+peut pas être clairement établi. Cependant, il devrait être possible
+d'avoir un assentiment général sur le fait que les capacités d'analyse
+XML et l'addition doivent se situer dans des compétences
+différentes. Une compétence doit en effet représenter un ensemble
+\emph{cohérent} de capacités.
+
+Convenir qu'à une compétence doit correspondre une et une seule
+capacité (ou réciproquement) pourrait sembler raisonnable, mais la
+réponse n'est pas aussi simple, et dans tous les cas cela risque de ne
+pas résister à la réalité des programmeurs... Les problèmes qui
+apparaissent ici sont les mêmes que ceux habituellement (et
+universellement) rencontrés en génie logiciel, et en conception objet
+en particulier, concernant la décomposition en objets.
+
+\bigskip
+
+Un service doit pouvoir  être ajouté ou retiré \textbf{dynamiquement} à un
+agent\footnote{Les aspects dynamiques de \magique{} seront traités
+  plus en détail ultérieurement.}.  \magique{} contient à cet effet
+les méthodes \code{addSkill()} et \code{removeSkill()}.  Un agent
+peut bien sûr contenir plusieurs services ou même n'en contenir aucun.
+Une classe de service doit tout d'abord implémenter (directement ou
+par héritage) l'interface \code{Skill} définie dans le package
+\code{fr.lifl.magique.Skill}.  Une classe de service est une classe
+``normale'' qui possède donc des attributs et des méthodes. Ce sont
+toutes (et uniquement celles-là) les méthodes publiques de cette
+classe qui pourront être exploitées par un agent qui possédera cette
+compétence. Posséder une compétence c'est ``apprendre'' une instance
+de la classe définissant la compétence.
+
+\medskip
+
+La philosophie de conception préconisée par \magique{} consiste à
+démarrer la construction d'une application à partir d'agents déjà
+existants (éventuellement vides) et de leur adjoindre les services
+nécessaires au travail. Le concepteur construira peu à peu un
+ensemble de services et un ensemble d'agents de base implémentant
+certains d'entre eux.
+
+\bigskip
+
+À titre d'exemple, reprenons notre Ping-Pong mais cette fois-ci avec
+la notion de service. Il y a dans cette application deux services~:
+savoir faire \code{ping} et savoir faire \code{pong}. Nous ne
+détaillons que le premier, le second étant sensiblement identique.
+
+\bigskip
+
+Quelques précisions sont nécessaires avant de développer notre premier
+service. Si le service ne fait référence à aucun agent, le service
+implémente l'interface \code{Skill}. Si par contre, comme c'est le cas
+ici, il est nécessaire de faire référence à une méthode \magique{}
+(ici \code{perform}) il faut que l'agent puisse récupérer un pointeur
+sur l'agent qui l'implémentera. L'API contient à cet effet une classe
+particulière nommée \linebreak\code{MagiqueDefaultSkill} qui s'occupe
+de faire le lien avec l'agent qui implémente le service. Cela se fait
+simplement en ajoutant au service un attribut \code{myAgent} qui
+contiendra une référence à l'agent qui contiendra le service. Cet
+attribut sera affecté par le constructeur du service auquel on passera
+le nom de l'agent au moment de la création.
+
+
+\programme{chap3/PingSkill.java}
+
+
+L'implémentation de l'agent \code{Ping} peut par exemple se faire à
+partir d'un agent de base~:
+
+\programme{chap3/PingImp.java}
+
+L'agent \code{Pong} doit subir une modification identique : il faut
+créer un service \code{PongSkill} puis créer un agent qui apprendra ce
+service. Le superviseur par contre ne change pas. Il est bien sûr
+toujours possible de lancer l'ensemble des agents dans la même JVM
+comme dans le chapitre précédent.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Différentes méthodes de communication}
+
+Jusqu'à présent nous n'avons utilisé qu'une seule méthode de
+communication entre agents. Elle est rudimentaire puisqu'\textit{a
+  priori} elle ne possède pas d'argument et elle ne renvoie pas de
+résultat. Bien sûr, l'API \magique{} propose d'autres méthodes de
+communication. Tout d'abord, commençons par les paramètres. 
+
+
+\section{Le passage de paramètres}
+
+Toute méthode d'un agent qui est accessible de l'extérieur de l'agent
+doit impérativement n'utiliser que des objets sérialisables. Il est
+donc impossible d'utiliser des \code{int}, \code{char} ou autres
+\code{double}. Tout doit être encapsulé dans un objet sérialisable
+pour passer sans problème dans les flux de communication \java{}. Il en va
+de même si la méthode possède une valeur de retour.
+
+\medskip
+
+L'appel à partir d'un agent d'une méthode avec paramètre se fait par
+une version polymorphe de la méthode \code{perform} qui contient
+comme nouveau paramètre un tableau d'objets contenant les paramètres à
+passer à la méthode : 
+
+\begin{center}
+  \code{perform(String,object[])}
+\end{center}
+
+
+La syntaxe usuelle en \magique{} est donc :
+
+{\small
+\begin{verbatim}
+ Object[] params = { .... } // liste des paramètres
+ perform("nom_de_methode",params);
+\end{verbatim}
+}
+
+ou 
+{\small
+\begin{verbatim}
+ perform("nom_de_methode",new  Object[] { .... });
+\end{verbatim}
+}
+
+
+Néanmoins, afin de faciliter le travail du concepteur, l'API \magique{} 
+contient des définitions polymorphes de toutes les méthodes de
+communication jusqu'à 4 arguments. En résumé si vous avez au plus 4
+arguments, vous pouvez directement faire
+\code{perform("method",arg1,arg2, ...)}. 
+Par contre à partir de cinq arguments le tableau
+d'objets est nécessaire et le premier argument dans un
+\code{perform} où le destinataire n'est pas nommé ne peut pas être
+de type \code{String}.
+
+\bigskip
+
+La méthode \code{perform} est utilisée pour les méthodes qui ne
+renvoie pas de méthode. Pour les méthodes qui renvoient un résultat,
+deux autres méthodes de communication existent :
+
+\begin{itemize}
+\item \code{askNow()}; appel de méthode synchrone avec
+  résultat. Quand cette méthode est appelée, l'exécution de l'agent se
+  fige jusqu'à obtention du résultat.
+\item \code{ask()}; appel de méthode asynchrone avec résultat. Après
+  l'appel de cette méthode, l'agent continue son exécution. Si
+  quelqu'un répond à cette requête, la réponse est rangée dans un
+  tableau de réponses propre à chaque agent. C'est l'agent lui-même
+  qui doit explicitement aller chercher la réponse.
+\end{itemize}
+
+Pour chacune de ces deux méthodes, le traitement des paramètres est
+identique au \code{perform}; il est nécessaire d'utiliser un tableau
+d'objets pour passer les paramètres.
+
+\bigskip
+
+Pour illustrer notre propos, nous allons modifier PingPong. Jusqu'à
+présent notre PingPong ne s'arrêtait jamais. Nous souhaitons
+maintenant qu'il s'arrête au bout de 10 messages. Il existe plusieurs
+moyens pour stopper cette partie. On peut par exemple ajouter dans
+l'un des deux agents \code{ping} ou \code{pong} un compteur
+incrémenté à chaque message écrit. On s'arrange ensuite pour que quand
+ce compteur arrive à 10, l'agent n'exécute plus le \code{perform}, ce
+qui stoppe les messages respectifs.
+
+Une autre solution, plus ``agent'' consiste à considérer le compteur
+comme un agent à part entière. Les agents \code{ping} et
+\code{pong} font alors appel à \code{compteur} pour savoir s'ils continuent
+ou pas leurs messages. Bien sûr, la demande d'autorisation au compteur
+doit être bloquante, on utilisera donc pour cela la méthode
+\code{askNow}. Pour montrer le passage de paramètres on considérera
+de plus que chaque agent incrémente d'un certain pas une valeur
+affichée avec chaque message et envoie cette valeur à son congénère
+qui fait ensuite de même.
+
+Voici la compétence compteur~:
+
+\programme{chap4/Compteur.java}
+
+
+et l'implémentation de l'agent compteur se fait de manière maintenant classique :
+
+\programme{chap4/CompteurImp.java}
+
+
+Les services de nos agents \code{Ping} et \code{Pong} sont alors
+modifiés de la manière suivante :
+
+
+\programme{chap4/PingSynchroSkill.java}
+
+L'implémentation des nouveaux agents se fait aussi très classiquement :
+
+\programme{chap4/PingSynchroImp.java}
+
+L'écriture du second agent, la compilation et l'exécution ne posent
+ maintenant plus aucune difficulté. Seule l'implémentation de notre
+superviseur nécessite une petite modification. Il doit maintenant
+appeler la méthode \code{ping} avec un argument.
+
+\programme{chap4/SuperImp.java}
+
+On notera encore une fois que cette décomposition à quatre agents est
+arbitraire et nous aurions aussi bien pu enseigner la compétence
+compteur au superviseur ou encore à  \code{ping} ou \code{pong}.
+C'est une simple question de choix d'implémentation et de niveau de
+décomposition de l'application.
+
+\bigskip
+
+L'application Ping-Pong décrite jusque maintenant n'est pas
+synchrone. Il se peut donc que plusieurs \textit{ping} apparaissent
+avant un quelconque \textit{pong}. Afin de remédier à ce problème nous
+pouvons remplacer le \code{perform("pong",params)} par une méthode
+\code{askNow} qui assurera la synchronisation.
+
+
+\subsection{encore d'autres méthodes de communication ...}
+
+\magique{} contient encore bien d'autres méthodes de communication.
+Nous allons tenter de les résumer ici. Pour chaque méthode de
+communication, il existe dans \magique{} deux formes différentes~:
+
+\begin{itemize}
+\item Appel non nommé \\
+  On passe en premier argument le nom de la méthode invoquée sous
+  forme de chaîne de caractères et dans les arguments suivants les
+  paramètres nécessaires à cette méthode. \\
+  Exemple~: \code{perform("pong",params);}
+
+\item Appel nommé \\
+  On passe en premier argument le nom de l'agent concerné puis le nom
+  et les paramètres de la méthode invoquée comme précédemment.
+
+  Exemple~: \code{perform("paul","calcul",params);} ou \linebreak
+  \code{perform("paul@buxus.lifl.fr:4444","calcul",params);} si l'on
+  veut être plus précis et être certain d'éviter tout confusion sur le
+  nom au cas où deux agents sur deux machines différentes auraient le
+  même nom de création.
+\end{itemize}
+
+\bigskip
+
+
+Sans les détailler, les différentes méthodes d'envoi de
+messages en \magique{} sont donc~:
+\begin{itemize}
+\item \code{ask}; appel de méthode asynchrone avec résultat ~:
+  \begin{itemize}
+  \item \code{ask(String)} appel non nommé d'une méthode sans params
+  \item \code{ask(String,Object[])} appel non nommé d'une méthode
+    avec para\-mètres
+  \item \code{ask(String,String)} appel nommé d'une méthode sans
+    paramètres
+  \item \code{ask(String,String,Object[])} appel nommé d'une méthode
+    avec pa\-ra\-mètres
+\end{itemize}
+\item \code{askNow}; appel de méthode synchrone avec résultat
+\item \code{perform}; appel de méthode sans résultat
+\item \code{broadcastToAll}; envoi d'un message à toute mon équipe
+  (moi compris)
+\item \code{broadcastToBasis}; envoi d'un message à toutes les
+  feuilles de mon équipe.
+\end{itemize}
+
+
+\section{Messages synchrones ou asynchrones}
+
+Jusqu'à présent, les seules invocations de compétences à d'autres
+agents ont été effectuées soit avec \code{perform} qui n'attend
+aucune réponse, soit avec \code{askNow} qui bloque l'agent demandeur
+jusqu'à obtention de la réponse. Ce dernier type de message est appelé
+synchrone car il synchronise l'exécution de l'agent demandeur et de
+l'agent receveur à l'obtention de la réponse. \magique{} contient
+néanmoins une autre méthode de communication qui permet de poser une
+question à un autre agent sans attendre la réponse. C'est la méthode
+\code{ask}.
+
+\medskip
+
+Imaginons un problème très simple. Deux agents \code{f} et
+\code{g} doivent chacun effectuer un calcul et renvoyer ensuite un
+réponse sous forme d'un entier. Un troisième agent collecte ces deux
+informations pour en faire la somme. Ce problème, très générique, est
+indépendant du calcul. Nous considérerons donc des agents qui possède
+un service qui renvoie un simple nombre après une pause $p$
+(symbolisant le temps calcul). Un tel service s'écrit trivialement de
+la manière suivante~:
+
+
+\programme{chap4/CalculTrivial.java}
+
+
+\subsection{Traitement synchrone}
+
+Pour bien fixer les choses, montrons tout d'abord comment l'ensemble
+fonctionne si on utilise classiquement \code{askNow} pour obtenir un
+traitement synchrone. L'agent collecteur des deux résultats de
+\code{f} et \code{g} doit appeler la méthode \code{calcul} de
+ces deux agents puis afficher le résultat. Ce service s'écrit
+donc :
+
+\programme{chap4/CalculCompletSynchrone.java}
+
+On constate que ce service demande à l'agent \code{f} d'effectuer son
+calcul pendant 15s et renvoyer 15 tandis qu'il demande à l'agent
+\code{g} d'effectuer son calcul pendant 10s et renvoyer 10.
+
+\medskip
+
+L'implémentation de ces différents agents est maintenant classique.
+Nous détaillons l'implémentation de l'agent \code{f}
+(\code{g} étant quasiment identique), l'implémentation du
+superviseur et l'implémentation d'un agent \code{lanceur} pour
+démarrer le calcul.
+
+\programme{chap4/FImp.java}
+
+\programme{chap4/SuperImp2.java}
+
+\programme{chap4/LanceurImp.java}
+
+
+Après compilation de l'ensemble, le lancement de cette application se
+fait en tapant dans chacun des shells prévus à cet effet les commandes~:
+
+
+\noindent\code{java fr.lifl.magique.Start chap4.SuperImp2
+  4444 3}
+
+\noindent\code{java fr.lifl.magique.Start chap4.FImp 5555 }\emph{SuperImphost:port}
+
+\noindent\code{java fr.lifl.magique.Start chap4.GImp 6666 }\emph{SuperImphost:port}
+
+\noindent\code{java fr.lifl.magique.Start chap4.LanceurImp 7777 }\emph{SuperImphost:port}
+
+
+Au bout de 25s vous obtiendrez le résultat dans la fenêtre du
+superviseur. On constate donc que les exécutions de \code{f} et
+\code{g} ont été faites en série et non en parallèle. Ceci vient du
+fait que le \code{askNow} à \code{g} ne peut se faire que quand le
+\code{askNow} de \code{f} s'est terminé. L'exécution d'une méthode
+\code{askNow} est bloquante.
+
+
+\subsection{Traitement asynchrone}
+
+C'est la méthode \code{ask} qui permet le traitement asynchrone. Le
+résultat à cette requête peut être obtenu plus tard par l'utilisation
+des méthodes \code{isAnswerReceived} et \linebreak\code{returnValue} à qui
+on passe la question pour laquelle on souhaite une réponse. Pour cela
+il faut avoir conservé une référence de la question. Un objet particulier nommé
+\code{request} est prévu à cet effet.  \code{isAnswerReceived}
+renvoie un booléen indiquant si une réponse est arrivée pour la question
+concernée, \code{returnValue} renvoie la réponse obtenue pour la
+question concernée. Si la réponse n'est pas encore arrivée, cette
+méthode attend la réponse. Elle est donc bloquante.
+
+\medskip
+
+Notre service de calcul complet devient donc 
+
+\programme{chap4/CalculCompletAsynchrone.java}
+
+
+Cette fois-ci l'exécution (en utilisant cette fois \code{SuperImp3})
+ne prend plus que 15s, c'est à dire le temps de la méthode qui prend
+le plus de temps. \code{f} et \code{g} ont cette fois été effectués
+en parallèle.
+
+
+\section{Test de primarité}
+
+L'un des exercices favoris en arithmétique consiste à distribuer le
+calcul de longues suites numériques ou de méthodes de calcul coûteuses
+en temps, sur des machines distantes réparties sur le net. On trouvera
+par exemple des agents spécialisés dans le ``cassage'' du code RSA 256
+ou 512 (\url{www.distributed.net}), l'identification des grands
+nombres de premiers (\url{www.mersenne.org}) ou l'écoute
+d'intelligence extraterrestre (\url{www.seti.org}). Illustrons la
+manière dont cela peut se faire avec \magique.
+
+\bigskip
+
+Pour illustrer notre propos, nous allons écrire un SMA permettant de
+distribuer le calcul du test de primarité d'un nombre sur un ensemble
+d'agents répartis sur le réseau.
+
+La première étape consiste à écrire un service de recherche d'un
+diviseur d'un nombre parmi les entiers compris entre une borne minimum et
+une borne maximum. Appelons cette méthode \code{cherche} et considérons
+qu'elle renvoie un \code{Integer} contenant -1 s'il n'y a pas de
+diviseur entre ces bornes, et le diviseur s'il y en a un.
+
+
+\programme{chap4/ChercheDiv.java}
+
+La partie la plus délicate concerne l'agent collecteur. Celui-ci doit
+compter le nombre d'agents disponibles dans son équipe, découper les
+intervalles de nombres à tester en tranches égales pour chaque agent,
+lancer les requêtes en parallèle à chacun de ces agents et enfin
+collecter les résultats.
+
+\programme{chap4/TestPrimal.java}
+
+Il ne reste plus maintenant qu'à implémenter ces deux types d'agent,
+ce qui se fait de manière maintenant très classique.
+
+\programme{chap4/ChercheurImp.java}
+
+\programme{chap4/CollecteurImp.java}
+
+
+L'exécution de ce SMA se fait très simplement. On lance l'agent
+\code{Collecteur} sur une machine et autant d'agents
+\code{Chercheur} qu'il est possible d'en mettre sur chacune des
+machines du réseau. Plus on place d'agents \code{Chercheur} plus le
+calcul sera rapide. Une fois les agents \code{Chercheur} connectés,
+on lance le calcul au niveau de l'agent \code{Collecteur} qui
+fournit ensuite la réponse finale.
+
+\medskip
+
+Avec ce petit SMA vous découvrirez par exemple que les plus grands
+nombres premiers gérables par un \code{Integer} \java{} sont
+2147483647, 2147483629, 2147483587, 2147483579, 2146483563 et
+2147483549.
+
+\medskip
+
+Bien sûr le code présenté ici est très sommaire. Les agents
+\code{Chercheur} ne s'arrêtent pas quand l'un d'entre eux a trouvé
+un diviseur. Ils ne se déconnectent pas quand l'application est
+terminée et ils ne peuvent pas faire de reprise sur panne en milieu de
+calcul. Chacun peut facilement imaginer les améliorations possibles de
+ce programme mais elles sortent du cadre de ce tutoriel.
+
+
+\subsection{Un autre point de vue}
+
+L'agent \code{Collecteur} précédemment décrit a été réalisé en
+utilisant la méthode \code{ask} qui permet le traitement asynchrone
+des requêtes. Une autre possibilité consiste à remplacer chaque
+\code{ask} par deux appels \code{perform} entre les deux agents
+concernés. Le \code{Collecteur} appelle la méthode \code{cherche}
+de l'agent \code{Chercheur} et celui-ci appelle une méthode spéciale
+stockant la réponse chez le \code{Collecteur} une fois le calcul
+effectué. De cette manière il n'y a plus de \code{ask} dans
+l'application. Certains lecteurs préféreront le code précédent,
+d'autres préféreront celui-ci. Dans ce cas, c'est une affaire de goût. 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Synthèse~: un petit exemple complet}
+
+
+Dans cette partie, nous allons synthétiser les notions rencontrées
+jusque maintenant à travers un petit exemple complet.  \'Evidemment,
+l'exemple que nous allons étudier sera volontairement très
+rudimentaire (on pourrait même peut être contester son caractère
+vraiment agent). L'intérêt de sa simplicité est de permettre de
+montrer l'ensemble du code et de présenter ainsi les principaux
+concepts de programmation de SMA avec \magique{}. Nous allons montrer
+ici que, pour toute personne connaissant le langage \textsc{Java}, le
+surcoût de la mise en \oe{}uvre d'une conception avec \magique{} est
+quasiment nul tout en permettant une distribution facile de
+l'application sur un réseau.
+
+
+\section{Le problème}
+
+Il s'agit d'un calcul de vérification de la conjecture dite de Collatz
+ou de Syracuse ou encore le problème $3x+1$. Le
+problème étudié est le suivant~:
+
+\begin{quote}
+  \emph{Considérons la fonction $f$ qui a tout entier $n$ associe~:
+    \[f(n) = \left\{
+      \begin{array}{ll}
+        \frac{n}{2} & \mbox{ si } n \mbox{ est pair }\\
+        3n+1 & \mbox{ si } n \mbox{ est impair }\\
+      \end{array}\right.
+    \]
+    La conjecture affirme qu'à partir de tout $n$, on peut toujours
+    atteindre 1 après suffisamment d'itérations de la fonction $f$~:
+    \[\forall n\in \mathbb{N} , \exists k\in\mathbb{N} ,
+    \underbrace{f(...(f}_{k\mbox{ fois}}(n)..)=1\]
+    }
+\end{quote}
+
+Il s'agit donc de disposer d'un SMA qui pour un entier $n$ donné
+produit la suite des valeurs des itérations de la fonction jusque 1.
+
+\section{Les compétences}
+
+Le compétences nécessaires à la résolution de ce problème peuvent être
+facilement identifiées~:
+\begin{description}
+\item [\code{ParitySkill}] le test de la parité d'un entier
+\item [\code{MultiplierSkill}] multiplication de deux entiers 
+\item [\code{AdderSkill}] addition de deux entiers
+\item [\code{DividerSkill}] division de deux entiers
+\item [\code{CollatzSkill}] calcul de la conjecture
+\end{description}
+
+Il faut donc écrire le code de chacune de ces compétences. Pour cela,
+il suffit de créer une classe qui hérite directement ou indirectement
+de l'interface \code{Skill} du paquetage
+\code{fr.lifl.magique.skill}. Chacune des ``méthodes'' publiques de
+cette classe pourra être alors utilisée par tout agent qui possédera
+cette compétence.
+
+Pour les quatre premières compétences, rien de particulier à ajouter
+par rapport à un code \textsc{Java} classique. On trouve ci-dessous le
+code complet des compétences \code{ParitySkill} et
+\code{AdderSkill}. Les autres sont similaires.
+
+\programme{chap5/ParitySkill.java}
+
+\programme{chap5/AdderSkill.java}
+
+% \programme{chap5/MultiplierSkill.java}
+
+% \programme{chap5/DividerSkill.java}
+
+La compétence \code{CollatzSkill} nécessite un peu plus
+d'explications. En effet, pour accomplir sa tâche elle doit faire
+appel aux autres compétences. C'est ici qu'inter\-vien\-nent les
+primitives \magique{} d'invocation de compétences mentionnées
+précédemment. Dans ce cas particulier puisqu'il s'agit de calcul
+nécessitant que la réponse à une requête soit connue avant de
+poursuivre, c'est la méthode \code{askNow} qui doit être utilisée.
+Ainsi, pour invoquer la méthode \code{isEven} de la compétence
+\code{ParitySkill}, sur \linebreak l'\code{Integer} \code{x} il faut
+écrire~:
+
+\begin{quote}
+  \code{Boolean value = (Boolean) askNow("isEven",x);}
+\end{quote}
+
+On obtient pour la compétence \code{CollatzSkill}, le code complet est
+donné ci-dessous (rappel~: seules les méthodes publiques sont accessibles
+et donc considérées comme ``méthodes de la compétences'').
+
+\programme{chap5/CollatzSkill.java}
+
+On peut noter aussi l'invocation de la compétence \code{display},
+grâce à la primitive \code{perform} car ici il n'y a pas de réponse
+attendue. Il s'agit de déléguer à la compétence qui convient (par
+défaut \code{DisplaySkill} présente dans tout agent \magique{} gère
+cette invocation) la réalisation de l'affichage demandé. Il suffit
+donc d'adapter cette compétence pour obtenir l'affichage pour tout
+format ou type de support.
+
+
+
+\section{La hiérarchie et les agents}
+\label{sec:exple-hieragent}
+
+Il s'agit de répartir les compétences parmi les agents du SMA puis
+d'organiser ces agents dans une hiérarchie. Nous allons imposer
+arbitrairement la structure du SMA et la répartition des compétences.
+Nous travaillerons ici avec sept agents~: un pour chacune des
+compétences précédemment citées, un agent qui supervisera les quatre
+agents possédant les compétences arithmétiques de base et un
+superviseur global du SMA. D'autres choix auraient bien sûr pu être
+faits.
+
+On dispose donc d'un SMA hiérarchique correspondant à la structure
+présentée à la figure~\ref{fig:SMAcollatz}. Rappelons que l'existence
+de cette structure hiérarchique permet la gestion automatique de la
+gestion des invocations des compétences. Ainsi lorsque la compétence
+\code{CollatzSkill} requiert la compétence \code{ParitySkill},
+l'agent \code{collatz} n'a pas besoin de connaître explicitement
+l'agent \code{parity}, \magique{} gère l'acheminement de la
+requête. En fait la seule chose qui importe est de savoir que la
+compétence \code{ParitySkill} est présente dans le SMA.
+
+
+\begin{figure}[htb]
+\begin{center}
+%      \includegraphics{/SMAcollatz}      
+  \caption{la structure hiérarchique choisie}
+  \label{fig:SMAcollatz}
+\end{center}
+\end{figure}
+
+
+Venons-en à la création de nos agents. \magique{} se base sur la
+notion de plate-forme, qui est en fait l'équivalent pour \magique{} de
+la JVM. Cette plate-forme prend en charge les problèmes liés à la
+distribution qui est ainsi masquée pour le développeur. A priori, on
+ne trouve qu'une plate-forme par machine même si cela n'est pas une
+obligation. Un agent est donc créé par une plate-forme et il faut
+ensuite faire son ``éducation'' en lui enseignant les compétences que
+l'on souhaite lui donner.
+
+Le code ci-dessous présente la création de l'agent possédant la seule
+compétence \code{ParitySkill}. Cet agent doit se rattacher dans la
+hiérarchie à son superviseur. C'est ce qui est fait par l'appel à la
+méthode \code{connectToBoss}. Ici on suppose que ce superviseur se
+trouve dans la même plate-forme (ce superviseur n'a besoin d'aucune
+compétence particulière, il n'est là que pour chapeauter les agents
+``mathématiques'') et qu'il doit lui même être connecté au superviseur
+global appelé \code{"super"} placé dans une autre plate-forme.  Cette
+simple commande de connexion va suffire pour gérer les communications
+distantes entre les agents. On note que cette requête est la même que
+les agents soient distants ou pas. Il s'agit simplement de demander la
+création d'une relation d'accointance hiérarchique.
+
+
+\programme{chap5/ParityImp.java}
+
+Pour les autres agents il en va de même. Il faut juste savoir quels
+agents évoluent sur la même machine et donc dans la même plate-forme.
+
+\programme{chap5/AdderImp.java}
+
+\programme{chap5/MultiplierImp.java}
+
+\programme{chap5/DividerImp.java}
+
+Pour que le calcul se fasse, il faut invoquer la compétence
+\code{conjecture}, cela peut être fait par exemple après la création
+de l'agent \code{collatz} (cf. code ci-dessous). Mais avec le
+mécanisme de délégation, cette invocation aurait pu être fait par
+n'importe quel autre agent.
+
+\programme{chap5/CollatzImp.java}
+
+Si en plus des programmes, \code{ParityImp}, \code{CollatzImp}, on
+dispose des autres \code{AdderImp}, \code{MultiplierImp},
+\code{DividerImp}, \code{SuperImp} écrits sur le même prin\-cipe
+(en supposant donc que tous ces agents se trouvent sur des plates-formes
+- donc a priori machines - différentes), on peut maintenant en
+exécutant ces programmes sur leur machine respectives ``exécuter'' ce
+SMA.
+
+
+\section{}
+
+L'exécution de ce SMA se fait par les commandes suivantes dans
+différentes JVM (bien entendu éventuellement sur différentes
+machines, si tous ces exemples sont lancées sur une même machine, il
+ne faudra pas oublier de préciser les ports)~:
+
+\begin{itemize}
+\item \code{java fr.lifl.magique.Start chap5.SuperImp}
+\item \code{java fr.lifl.magique.Start chap5.ParityImp} \emph{superHost:port}
+\item \code{java fr.lifl.magique.Start chap5.CollatzImp} \emph{superHost:port}
+\item \code{java fr.lifl.magique.Start chap5.AdderImp}  \emph{superMathHost:port}
+\item \code{java fr.lifl.magique.Start chap5.MultiplierImp} \emph{superMathHost:port}
+\item \code{java fr.lifl.magique.Start chap5.DividerImp}  \emph{superMathHost:port}
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Dynamicité}
+\label{chap:dynamic}
+
+Un point important pour un SMA est que celui-ci puisse évoluer
+dynamiquement. L'évolution peut se situer sur le plan individuel~: les
+agents peuvent apprendre ou perdre des compétences, ou sur le plan
+organisationnel~: la structure du SMA est modifiée, avec l'apparition
+ou la disparition d'agents par exemple. 
+
+Nous allons présenté maintenant ces deux aspects.
+
+
+\section{\'Evolution individuelle}
+
+L'évolution d'un agent se fait de nombreuses manières~: on pourrait
+dire qu'il évolue dès qu'il fait la connaissance d'autres agents qu'il
+ajoute à son agenda, ou même dès qu'il obtient une information sur tel
+ou tel autre agent, dans ce cas, c'est sa connaissance des autres qui
+est modifiée. Cependant ce qui nous intéresse ici c'est
+essentiellement l'évolution des capacités de l'agent c'est-à-dire de
+ses compétences.
+
+
+\subsection{Acquisition dynamique de compétence}
+
+En fait, nous avons déjà vu comment faire évoluer dynamiquement les
+compétences d'un agent~: nous n'avons même fait que cela~! En effet,
+lorsque que l'on ajoute des compétences à nos agents, ceci ``existe''
+déjà. Les \code{addSkill} que nous avons effectués réalisent
+l'acquisition dynamique d'une compétence. Il suffit donc qu'un agent
+exécute une instruction \code{addSkill} pour acquérir une
+compétence, et ceux à n'importe quel moment de son cycle de vie. La
+seule restriction  est que la nouvelle compétence n'apporte pas une
+méthode ayant la même signature qu'une méthode déjà connue via une
+autre compétence. Dans le cas contraire une exception
+\code{SkillAlreadyAcquiredExecption} est levée.
+
+
+\subsection{Oubli dynamique de compétence}
+
+L'oubli se fait de manière tout aussi simple grâce à la méthode
+\code{removeSkill}. Celle-ci prend pour paramètre la signature sous
+forme de chaîne de caractères d'une des méthodes apportée par la
+compétence à oublier. Attention, toutes les méthodes apportées par la
+compétence seront oubliées en même temps. Il convient d'être vigilant
+lors de l'écriture de la signature en respectant exactement la
+signature, et en mettant des espaces après chaque classe des
+paramètres.
+
+Examinons un petit exemple. considérons la compétence suivante~:
+
+\programme{chap6/ToBeForgottenSkill.java}
+
+Nous allons construire un petit programme élémentaire qui construit un
+agent, lui fait acquérir (dynamiquement) cette compétence, exploite
+une des méthodes de cette compétence et oublie cette compétence. Un
+nouvel appel à la même méthode va alors permettre de se rendre compte
+que la compétence n'est plus connue, un niveau de trace de 2 met ceci
+en évidence avec l'apparition du message \code{"unknwon
+  request"}. On constate qu'il en est de même pour la seconde méthode
+de la compétence~: c'est bien toute la compétence qui a été oubliée.
+
+\programme{chap6/IForgetImp.java}
+
+L'appel par
+\begin{quote}
+  \code{java fr.lifl.magique.Start chap6.IForgetImp 4444 2}
+\end{quote}
+permet de visualiser les requêtes à des compétences inconnues.
+
+On peut noter dans l'exemple, qu'il est nécessaire de donner la
+signature exacte, avec le nom complet des classes des paramètres,
+ainsi \code{String} n'est pas correct et doit être écrit
+\code{java.lang.String}. De même pour \code{ArrayList} qui devient\linebreak
+\code{java.util.ArrayList}. On remarque également que lorsqu'une
+méthode à plusieurs paramètres, la signature se note en plaçant une
+virgule immédiatement après chaque classe, sans passer d'espace,
+par contre cette virgule est elle suivie d'un unique espace.
+
+Dans cet exemple en plaçant la ligne contenant le premier
+\code{a.removeSkill} et en enlevant le commentaire devant la
+suivante, on peut vérifier que le comportement du programme est le
+même~: il suffit d'oublier n'importe quelle méthode de la compétence
+pour l'oublier dans son ensemble.
+
+Si l'on cherche à faire oublier une compétence que l'on ne possède
+pas, l'exception \code{SkillNotKnownException} est levée (ce sera
+notamment le cas si l'on se trompe dans l'écriture du nom de la méthode
+à oublier).
+
+
+\subsection{\'Enseignement dynamique de compétence}
+
+Nous en arrivons sans doute au point le plus intéressant. Celui-ci est
+sans doute une particularité et un apport de \magique{} encore plus
+intéressants. Il s'agit de permettre à deux agents, même placés sur
+des machines différentes de s'enseigner des compétences. Et cela peut
+être réalisé sans qu'il soit nécessaire d'effectuer des hypothèses sur
+l'existence de telle ou telle classe dans l'environnement (basiquement
+le \code{CLASSPATH}) de l'agent apprenant. Il est bien sûr cependant
+indispensable que l'agent apprenant connaisse ces compétences~!
+
+Ceci se réalise par l'invocation de la requête \code{learnSkill} par
+l'apprenant~:
+\begin{itemize}
+\item \code{learnSkill(java.lang.String , java.lang.String)}
+\end{itemize}
+
+\code{learnSkill} permet à un agent d'apprendre une compétence (dont
+on donne le nom complet dans le premier paramètre) auprès d'un autre
+agent (dont on donne le nom en second paramètre). Il existe des
+variantes avec des paramètres de cette compétence~: lorsque le
+constructeur de la compétence à apprendre requiert des paramètres
+ceux-ci doivent être précisés, à noter que si l'agent lui-même doit
+être passé en paramètre, alors ce cas est précisé par un
+booléen\footnote{Cela est nécessaire entre autre car un agent n'est
+  pas sérialisable et ne peut donc être passé en paramètre d'une
+  requête} (voir la doc API pour plus de détails).
+
+Nous allons illustrer cet aspect toujours avec notre exemple
+Ping-Pong~: le superviseur sera le seul qui aura la possibilité de
+connaître les compétences \code{PingSkill} et \code{PongSkill}. Il
+enseignera \code{PingSkill} à l'agent \code{ping} (cela se fait en
+demandant à \code{ping} d'apprendre) et par contre c'est l'agent
+\code{pong} qui demandera de lui-même au superviseur de lui enseigner la
+compétence \code{PongSkill}, ceci pour montrer les deux aspects.
+
+
+\programme{chap6/SuperImp.java}
+
+\programme{chap6/PingImp.java}
+
+\programme{chap6/PongImp.java}
+
+\'Evidemment l'invocation de \code{learnSkill} dans \code{PongImp}
+ne peut se faire qu'après la connexion au superviseur. On note le
+\code{Boolean.TRUE} passé en paramètre de la requête
+\code{learnSkill}, celui-ci indique que l'agent apprenant est un
+argument du constructeur de la compétence apprise.
+
+Le lancement se fait ainsi~:
+
+
+\noindent\code{java fr.lifl.magique.Start chap6.SuperImp 4444 2}
+\emph{PingImp host:port}
+  
+
+\noindent\code{java fr.lifl.magique.Start chap6.PingImp 5555 2} \emph{SuperImp host:port}
+
+\noindent\code{java fr.lifl.magique.Start chap6.PongImp 6666 2} \emph{SuperImp host:port}
+
+\bigskip
+
+Cependant une expérience plus intéressante doit être menée. Nous avons
+indiqué que l'apprentissage de compétence pouvait se réaliser dès lors
+que l'agent enseignant a accès au code de la compétence... Ce point
+peut être illustré très simplement~: il suffit de placer
+\code{chap6.PingImp} et \code{chap6.PongImp} dans des
+environnements qui n'ont pas accès (par leur \code{CLASSPATH}) aux
+compétences \code{chap6.PingSkill} et \linebreak\code{chap6.PongSkill} (tout
+en laissant accessibles à \code{chap6.SuperImp}) et de relancer
+l'exemple. On constate que le comportement est rigoureusement le
+même~: le (byte)code des compétences a donc été ``physiquement''
+transféré de l'environnement de \code{SuperImp} à celui des deux
+agents \code{ping} et \code{pong}~! L'échange de compétence peut
+donc se faire sans condition préalable entre tout agent. Cette
+opération est réalisée par l'intermédiaire des plates-formes.
+
+La démonstration est encore plus parlante si vous disposez de
+plusieurs machines et pouvez donc placer les agents sur ces machines
+distinctes (sinon il suffit de créer des répertoires \code{chap6}
+distincts et d'y placer les \code{PongImp.class} et
+\code{PingImp.class}). Dans ce cas les compétences sont
+automatiquement transférées d'un machine à l'autre. Cette
+fonctionnalité offerte par \magique{} offre évidemment une grande
+souplesse à l'utilisation et facilite la distribution des applications
+construite avec \magique{}.
+
+
+\section{Création dynamique d'agents}
+
+Il est également possible de créer dynamiquement des agents et de les
+intégrer à une hiérarchie. On peut distinguer deux cas de figure~: le
+premier, le plus simple, consiste pour un agent à créer des agents
+au sein de sa propre plate-forme, le second correspond à la création
+d'agents distants.
+
+
+\subsection{Création sur la même plate-forme}
+
+Abordons le cas d'une création ``locale''. Toujours avec notre
+application de ping-pong, nous allons avoir un agent superviseur qui
+va créer deux agents \code{ping} et \code{pong}, leur attribuer
+leurs compétences et les relier à lui-même en tant que superviseur.
+
+C'est toujours la plate-forme qui crée concrètement les
+agents. L'attribution de compétence et la connexion au superviseur
+peut se faire dans ce cas dans un ordre quelconque. Voici les classes
+nécessaires~:
+
+\programme{chap6/SuperCreatorImp.java}
+
+\programme{chap6/CreatorSkill.java}
+
+
+
+\subsection{Création distante d'agents}
+
+Ce cas est un peu plus complexe que le précédent. Nous allons
+illustrer avec la même ``application'', mais cette fois \code{ping}
+et \code{pong} sont créer dans un autre plate-forme que le
+superviseur.
+
+Ici il va falloir utiliser l'agent plate-forme de la plate-forme
+d'accueil pour créer les agents voulus. Pour qu'il puisse dialoguer
+avec cet agent plate-forme, le superviseur doit s'y connecter. Il
+s'agit ici d'une connexion directe indépendante de toute
+hiérarchie. Ensuite une requête de création  de l'agent voulu est
+envoyé à cet agent plate-forme (ici la requête est nécessairement
+nommée car faite en dehors de toute hiérarchie). Vient ensuite la
+requête de connexion de l'agent créé à son superviseur. Cette fois la
+connexion se fait absolument avant l'enseignement des compétences, car
+pour pouvoir avoir un enseignement de compétences distants, avec
+éventuellement transfert du bytecode, il est évidemment nécessaire que le lien
+existe entre l'apprenant est l'``enseignant''.
+
+On obtient~:
+
+\programme{chap6/DistantCreatorImp.java}
+
+\programme{chap6/DistantCreatorSkill.java}
+
+Pour faire ce teste, il faut lancer les plate-formes sur les machines
+destinées à accueillir \texttt{Ping} et \texttt{Pong}, puis de lancer
+le ``créateur''~:
+
+\begin{itemize}
+\item \code{java fr.lifl.magique.PlatformLauncher} (pour \texttt{Ping}
+  et \texttt{Pong})
+\item \code{java fr.lifl.magique.Start DistantCreatorImp 4444 2
+    }\emph{PingHost:port} \emph{PongHost:port}
+\end{itemize}
+
+
+\section{Une dynamicité transparente}
+
+Dans le même esprit que ce qui vient d'être dit nous allons précisé un
+point que nous n'avons pas évoqué au moment où nous avons parlé de
+l'invocation de requêtes~: que se passe-t-il lorsqu'un agent passe en
+paramètre à une requête un objet d'une classe inconnue de l'agent qui
+reçoit la requête~? Pour être plus précis, nous devrions dire que c'est
+la plate-forme de l'agent récepteur qui ne connaît pas (n'a pas accès
+à) la classe de cet objet.
+
+\bigskip
+
+Cela peut se produire dans le cas suivant~: considérons la classe
+\code{UnObject.java} que voici. 
+
+\programme{chap6/UnObject.java}
+
+Les instances de cette classe agrège un \code{Object} 
+quelconque. Ces instances sont utilisés comme paramètres de la méthode \code{ping}
+(resp. \code{pong}) de la compétence \linebreak\code{PingSkill2}
+(resp. \code{PongSkill2})~:
+
+\programme{chap6/PingSkill2.java}
+
+Le problème se pose lorsque l'on passe en paramètre d'une requête des instances de
+\code{UnObject} qui agrège des objets dont la classe ne sera pas
+connue (ou accessible) à l'agent qui recevra cette requête. C'est le
+cas pour l'invocation à la méthode \code{ping} par le superviseur
+que voici~:
+
+\programme{chap6/SuperImp2.java}
+
+avec pour la classe \code{Ball} (la classe \code{AnotherBall} est
+similaire)~:
+
+\programme{chap6/Ball.java}
+
+Que se passe-t-il pour l'agent \code{ping} si celui-ci tourne sur
+une autre plate-forme qui \textbf{n'a pas accès} aux classes
+\code{Ball} et \code{AnotherBall}~?
+
+\programme{chap6/PingImp2.java}
+
+(Les fichiers \code{chap6/PongSkill2.java} et
+\code{chap6/PongImp2.java} sont similaires)
+
+\bigskip La réponse est~: il ne se passe rien de remarquable pour
+l'utilisateur~! Ce qui, paradoxalement, est en fait surprenant a
+priori~: la classe n'étant pas connue, il devrait y avoir une
+exception levée. Mais cela serait préjudiciable à la souplesse
+d'utilisation de \magique{}~: il serait nécessaire de faire des
+présuppositions sur la présence de telle ou telle classe sur les différentes
+plate-formes. 
+
+Pour contourner ce problème, \magique{} se charge de transmettre le
+bytecode des classes des objets nécessaires à la bonne interprétation
+des paramètres des requêtes entre les plate-formes. Dans notre cas, le
+bytecode de \code{Ball} et \code{AnotherBall} est transmis depuis
+la plate-forme de \code{SuperImp2} à la plate-forme de
+\code{PingImp2} (et \code{PongImp2}). La technique sous-jacente
+est la même que celle qui permet l'échange de compétences.
+
+Cette fonctionnalité soulage d'un problème important qui aurait
+pénalisé la distribution des applications multi-agent.
+
+
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Déconnexion et mort d'un agent}
+
+Nous avons vu comment créer, connecter et distribuer des agents. Reste
+à voir les opérations inverses~: déconnecter un agent (et vérifier
+qu'il peut ensuite être reconnecté), l'arrêter et même arrêter
+complètement une plate-forme.
+
+Les compétences nécessaires à lé déconnexion et l'arrêt (``mort'') d'un
+agent lui sont connus à la création. Il s'agit principalement des
+compétences suivantes~:
+
+\begin{description}
+\item[\code{askForDisconnectionFrom}] se déconnecter d'un agent donné
+\item[\code{askForDisconnectionFromMyBoss}] se déconnecter de son
+  superviseur
+\item[\code{disconnectFromAll}] se déconnecte de tous les agents
+\item[\code{disconnectAndDie}] se déconnecter de tous et ``mourir''
+\end{description}
+
+Après une déconnexion il est évidemment possible à l'agent de se
+reconnecter en utilisant les services déjà connus.
+
+Le code suivant contient la plate-forme dans laquelle un agent va se
+déconnecter, se reconnecter, se ``suicider'', être recréé, puis la
+plate-forme s'arrête (définitivement). Des appels à une compétences
+d'un agent sur une autre plate-forme sont faits pour montrer
+l'effectivité des reconnexions et recréation.
+
+\programme{chap7/Disconnect2.java}
+
+et pour être complet les deux petits fichiers complices~:
+
+\programme{chap7/Disconnect1.java}
+
+\programme{chap7/Unskill.java}
+
+Ces fichiers se lancent par~:
+\begin{itemize}
+\item \code{java fr.lifl.magique.Start chap7.Disconnect1 4444 }\emph{verbose}
+\item \code{java fr.lifl.magique.Start chap7.Disconnect2 5555
+    }\emph{verbose} \linebreak\emph{Disconnect1-Host}\code{:4444}
+\end{itemize}
+
+Une fois que la plate-forme avec \code{Disconnect2} s'est arrêtée,
+il peut être intéressant de la relancer pour remarquer que la
+reconnexion entre plate-forme est possible.
+
+Une autre expérience intéressante est tuer violemment la JVM avec
+\code{Disconnect2} par un superbe \textsc{Ctrl-C} en cours
+d'exécution et ensuite de la relancer. On peut remarquer que la encore
+la reconnexion est possible (bien sûr puisqu'on relance le programme,
+toutes les requêtes sont réexécutées, il n'y a pas de reprise à
+l'endroit du ``crash'' provoqué).
+
+% %======================================================
+\chapter{L'environnement graphique d'exécution}
+
+Un environnement graphique permettant~:
+\begin{itemize}
+\item la construction d'agents par enrichissement de compétences
+\item l'organisation de ces agents en une forêt de hiérarchies
+\item la distribution/déploiement du SMA sur le réseau
+\item l'interaction avec les agents
+\end{itemize}
+
+Cet environnement ce lance par la commande 
+
+\begin{quote}
+  \code{java fr.lifl.magique.gui.LanceurAgents}
+\end{quote}
+Il est éventuellement nécessaire de préciser le \code{classpath} par
+l'option \code{-classpath}, notamment, il va falloir s'assurer que
+toutes les compétences que vous allez donner à vos agents sont
+accessibles. Vous obtenez alors à l'écran quelque chose comme ce qui
+est présenté à la figure~\ref{fig:environnement}.
+
+
+\begin{figure}[htb]
+\begin{center}
+      \includegraphics[width=\linewidth]{images/magiqueGUI.png}      
+  \caption{L'environnement graphique}
+  \label{fig:environnement}
+\end{center}
+\end{figure}
+
+Vous pouvez alors en quelques clicks construire vos agents et votre
+SMA. L'environ\-nement et son fonctionnement sont présentés plus en
+détail à l'adresse~: \url{http://www.lifl.fr/MAGIQUE/gui}
+
+
+Pour pouvoir déployer vos agents sur le réseau, la seule condition et
+qu'une plate-forme soit prête à les accueillir. Nous avons vu au
+chapitre~\ref{chap:dynamic} que grâce aux mécanismes d'échange
+dynamique contenus dans \magique{}, il n'était pas nécessaire de faire
+des hypothèses sur le code accessible par les plateformes. Il convient
+donc uniquement d'avoir lancer sur les machines hôtes une plate-forme
+d'accueil par~:
+
+\begin{quote}
+  \code{java fr.lifl.magique.PlatformLauncher} [\emph{port}]
+\end{quote}
+ou
+
+\begin{quote}
+  \code{java -jar magique.jar} [\emph{port}]
+\end{quote}
+
+% %======================================================
+% \chapter{La concurrence}
+
+
+
+% %======================================================
+% \chapter{Applications}
+
+% % \section{Le calcul distribué}
+
+% % \section{Le travail coopératif}
+
+% % \section{Les serveurs de joueurs virtuels}
+
+% % \section{L'inférence distribuée}
+
+% % \section{L'agent sur ma boite aux lettres}
+
+
+
+\nocite{*}
+\bibliographystyle{alpha}
+\bibliography{tutorial}
+
+\end{document}
+

@@ -1,0 +1,95 @@
+you need java >= jdk 1.* 
+you need the magique.jar (http://www.lifl.fr/MAGIQUE)
+you need a TCP/IP communication support for RMI
+
+you may want to use the magiqueGui.jar (see http://www.lifl.fr/MAGIQUE)
+
+DISTRIBUTED COMPUTATION
+***********************
+Collatz problem solved using skill programming.
+
+Skills are defined and dynamically loaded in agents to specified
+them. No more, specific agent classes are necessarily required. Only
+CollatzAgent class is explicitly created for private members (this
+could have been a skill too, but would not have been very
+natural). Other agent are instance of basic Agent class.
+
+DISTRIBUTED VERSION:
+********************
+You can use *Imp.java file to create Agent. Do not forget to change
+hostname in each agent (in ...connectToBoss("dieu@HOSTNAME:4444")),
+this must be set to the name of the machine where the SuperImp is run.
+
+Each agent is supposed to be launched on different machine, then one
+platform by machine. The default magique-rmi port (4444) is supposed
+to be used therefore no other platform (with that port) must be used
+at the same time... To have a different port, give this number as
+parameter to Platform constructor (warning : then you may have to
+change the connectToBoss...)
+
+Compile with javac *.java
+
+Use :
+
+java fr.lifl.magique.Start chap5.SuperImp                           
+java fr.lifl.magique.Start chap5.ParityImp superHost:port      
+java fr.lifl.magique.Start chap5.CollatzImp superHost:port [value]
+java fr.lifl.magique.Start chap5.AdderImp parityHost:port
+java fr.lifl.magique.Start chap5.MultiplierImp parityHost:port
+java fr.lifl.magique.Start chap5.DividerImp parityHost:port
+
+LOCAL VERSION:
+**************
+Sma.java is for local use of agents (all agents on the same platform)
+Use : 
+    java fr.lifl.magique.Start TestImp [4444 tracelevel [strating value for collatz conjecture]]
+
+in this version a "local" supervisor has been added, he manages the
+adder, divider, multiplier and parity agents.
+
+
+GUI :
+*****
+to use the interface to run the example, start the interface and do
+not forget to add the directory where the Collatz files are located to the
+classpath :
+
+* in a shell window :
+java -cp %CLASSPATH%;COLLATZ_DIR_PATH fr.lifl.magique.gui.LanceurAgents 
+(dos/windows)
+
+java -cp $CLASSPATH$;COLLATZ_DIR_PATH fr.lifl.magique.gui.LanceurAgents 
+(unix/linux)
+ 
+* in File menu chose :load, and in the COLLATZ_DIR_PATH open the collatz.magic
+file. (the hierarchical "SMA" appears)
+
+* in View menu chose to see "Execution frame", in execution chose to
+Show "Console Tools"
+
+* in "Computers" subwindow, edit the computers you want to use to run
+the agents (it will be convenient to File-Save the config).
+On these computers you must run the "magique daemon" (not a daemon in
+the unix sense), this is done with the command : java -jar magique.jar
+[portnumber] on these computer. The port used (default is 4444) must
+be set in the "Computers" window (right-click on the computer name).
+
+You do not need to put the class files of the Collatz package on the
+remote computers, the needed bytecoe will be automatically transferred
+when needed.
+
+
+* for each agent chose the computer : select the agent, then click on
+the chosen computer
+
+* click on the execute button : one window by agent appears in
+the execution frame, the agents run on the chosen machine.
+
+* in the BeanShell Console tools (menu "show" of the Execution window), enter :
+"agent.perform(Super,"conjecture", some integer);  ".
+Actually you can replace "Super" by any other agent.
+This launches the computation of the Collatz conjecture with the give
+integer as seed.
+
+* everything appears now in the execution frame of the Collatz Agent.
+

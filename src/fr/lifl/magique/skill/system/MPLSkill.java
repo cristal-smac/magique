@@ -1,0 +1,114 @@
+/**
+ * MPLSkill.java
+ *
+ *
+ * Created: Wed Nov 15 11:49:24 2000
+ *
+ * @author Jean-Christophe Routier
+ * @version
+ */
+package fr.lifl.magique.skill.system;
+import fr.lifl.magique.*;
+import fr.lifl.magique.skill.*;
+import fr.lifl.magique.agent.PlatformAgent;
+
+import java.net.*;
+import java.io.*;
+
+public class MPLSkill extends DefaultSkill {
+    
+    private ServerSocket server;
+    private Socket mySocket = null;
+    private BufferedReader in;
+    private OutputStream out = null;
+    /** MPL port = platformport + 1 */
+    private int port;
+
+    private final String STOP_MESSAGE = "STOP";
+    private final String STOP_ANSWER = "STOPPED";
+    private final String KILL_MESSAGE = "KILL";
+    private final String KILL_ANSWER = "KILLED";
+    private final String PING_MESSAGE = "PING";
+    private final String PING_ANSWER = "PINGED";
+    
+
+   /** 
+    * @param PlatformAgent the agent that owns this skill
+    * @param port the port of my  platform
+    */
+    public MPLSkill(PlatformAgent a, int port) {	
+	super(a);
+	this.port = port+1;
+    }
+
+    /** monitor for socket creation detection */
+
+    
+    public void startMPLSkill() {
+	new Thread(new MPLThread()).start();
+    }        
+
+    private void performWrapper(String skill) {
+	perform(skill);
+    }
+
+    private Object monitor = new Object();    
+    class MPLThread implements Runnable {
+	public void run() {
+	    boolean again = true;
+	    String msg = null;
+	    
+	    new Thread(new ServerSocketThread()).start();
+	    
+	    
+	    /* attend que la socket soit créée */
+	    synchronized(monitor) {
+		while (mySocket == null) {
+		    try {
+			monitor.wait();
+		    } catch(InterruptedException e) { e.printStackTrace(); }
+		}
+	    }
+	    
+	    while (again) {
+		try {
+		    msg = in.readLine();
+		} catch (java.io.IOException e) { e.printStackTrace(); }
+		if (msg != null) {
+		    if (msg.equals(STOP_MESSAGE)) {
+			again = false;
+			performWrapper("killPlatform");
+			try {
+			    out.write(STOP_ANSWER.getBytes()); 
+		    } catch (java.io.IOException e) { e.printStackTrace(); }
+		    }
+		    else if (msg.equals(KILL_MESSAGE)) {
+			again = false;
+		    performWrapper("killPlatform");
+		    try {
+			out.write(KILL_ANSWER.getBytes());
+		    } catch (java.io.IOException e) { e.printStackTrace(); }
+		}
+		    else if (msg.equals(PING_MESSAGE)) {
+			try {
+			out.write(PING_ANSWER.getBytes());
+			} catch (java.io.IOException e) { e.printStackTrace(); }
+		    }		
+		}
+	    }
+	}
+    }
+	
+    
+    class ServerSocketThread implements Runnable {
+	public void run() {
+	    try {
+		    server = new ServerSocket(port);
+		    mySocket = server.accept();
+		    in = new BufferedReader(new InputStreamReader(mySocket.getInputStream()));
+		    out = mySocket.getOutputStream();
+	    } catch (java.io.IOException e) { e.printStackTrace(); }	    
+	    monitor.notify();
+	}
+    }
+} // MPLSkill

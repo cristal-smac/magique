@@ -1,0 +1,89 @@
+DEFAGENT "Super"
+  CLASSE "fr.lifl.magique.Agent"
+  CLASSPATH ""
+  ISCOLLAPSED "false"
+  COMPUTER "134.206.27.232"
+  POSITION 335 44
+ENDDEF
+DEFAGENT "Multiplier"
+  CLASSE "fr.lifl.magique.Agent"
+  CLASSPATH ""
+  ISCOLLAPSED "false"
+  COMPUTER "134.206.27.232"
+  POSITION 473 204
+  DEFSKILL "MultiplierSkill"     CONSTRUCTOR "public MultiplierSkill()"
+     CLASSPATH "D:.jc.java.toy.collatz."
+   ENDDEF
+ENDDEF
+DEFAGENT "Math"
+  CLASSE "fr.lifl.magique.Agent"
+  CLASSPATH ""
+  ISCOLLAPSED "false"
+  COMPUTER "134.206.27.232"
+  POSITION 418 124
+ENDDEF
+DEFAGENT "Divider"
+  CLASSE "fr.lifl.magique.Agent"
+  CLASSPATH ""
+  ISCOLLAPSED "false"
+  COMPUTER "134.206.27.232"
+  POSITION 363 204
+  DEFSKILL "DividerSkill"     CONSTRUCTOR "public DividerSkill()"
+     CLASSPATH "D:.jc.java.toy.collatz."
+   ENDDEF
+ENDDEF
+DEFAGENT "Adder"
+  CLASSE "fr.lifl.magique.Agent"
+  CLASSPATH ""
+  ISCOLLAPSED "false"
+  COMPUTER "134.206.27.232"
+  POSITION 583 204
+  DEFSKILL "AdderSkill"     CONSTRUCTOR "public AdderSkill()"
+     CLASSPATH "E:.jc.java.toy.collatz."
+   ENDDEF
+ENDDEF
+DEFAGENT "Parity"
+  CLASSE "fr.lifl.magique.Agent"
+  CLASSPATH ""
+  ISCOLLAPSED "false"
+  COMPUTER "134.206.27.232"
+  POSITION 253 204
+  DEFSKILL "ParitySkill"     CONSTRUCTOR "public ParitySkill()"
+     CLASSPATH "D:.jc.java.toy.collatz."
+   ENDDEF
+ENDDEF
+DEFAGENT "Collatz"
+  CLASSE "fr.lifl.magique.Agent"
+  CLASSPATH ""
+  ISCOLLAPSED "false"
+  COMPUTER "134.206.27.232"
+  POSITION 253 124
+  DEFSKILL "CollatzSkill"     CONSTRUCTOR "public CollatzSkill(fr.lifl.magique.Agent)"
+     CLASSPATH "E:.jc.java.toy.collatz."
+     ARG "this"
+   ENDDEF
+ENDDEF
+DEFLINK
+  PARENT "Super"
+  CHILD "Collatz"
+ENDDEF
+DEFLINK
+  PARENT "Super"
+  CHILD "Math"
+ENDDEF
+DEFLINK
+  PARENT "Math"
+  CHILD "Parity"
+ENDDEF
+DEFLINK
+  PARENT "Math"
+  CHILD "Divider"
+ENDDEF
+DEFLINK
+  PARENT "Math"
+  CHILD "Multiplier"
+ENDDEF
+DEFLINK
+  PARENT "Math"
+  CHILD "Adder"
+ENDDEF

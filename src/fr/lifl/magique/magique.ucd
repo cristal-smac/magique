@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<editmodel:ClassDiagramEditModel xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:editmodel="editmodel.xmi" size="1104,1562" id="frodoroutiermagique0" metadata="nsuml-1.4" initialized="true" showWireOptions="3">
+  <children xsi:type="editmodel:ClassEditModel" location="508,203" size="86,29" targetConnections="//@children.3/@sourceConnections.2" id="frodoroutiermagique42" shortShow="true" runTimeClassModel="frodoroutiermagique1632;frodoroutiermagique1646;frodoroutiermagique1581;frodoroutiermagique1578;frodoroutiermagique1589;frodoroutiermagique1582;frodoroutiermagique1604;frodoroutiermagique1626;frodoroutiermagique1615;frodoroutiermagique1640;frodoroutiermagique1583;frodoroutiermagique1628;frodoroutiermagique1587;frodoroutiermagique1579;frodoroutiermagique1634;frodoroutiermagique1591;frodoroutiermagique1613;frodoroutiermagique1642;frodoroutiermagique1656;frodoroutiermagique1621;frodoroutiermagique1636;frodoroutiermagique1649;frodoroutiermagique1596;frodoroutiermagique1593;frodoroutiermagique1611;frodoroutiermagique1599;frodoroutiermagique1619;frodoroutiermagique1617;frodoroutiermagique1651;frodoroutiermagique1594;frodoroutiermagique1576;frodoroutiermagique1630;frodoroutiermagique1653;frodoroutiermagique1624;frodoroutiermagique1638">
+    <children xsi:type="editmodel:CompartmentEditModel" size="126,162">
+      <children xsi:type="editmodel:AttributeEditModel" id="frodoroutiermagique1578"/>
+      <children xsi:type="editmodel:AttributeEditModel" id="frodoroutiermagique1579"/>
+      <children xsi:type="editmodel:AttributeEditModel" id="frodoroutiermagique1581"/>
+      <children xsi:type="editmodel:AttributeEditModel" id="frodoroutiermagique1582"/>
+      <children xsi:type="editmodel:AttributeEditModel" id="frodoroutiermagique1583"/>
+      <children xsi:type="editmodel:AttributeEditModel" id="frodoroutiermagique1587"/>
+      <children xsi:type="editmodel:AttributeEditModel" id="frodoroutiermagique1589"/>
+      <children xsi:type="editmodel:AttributeEditModel" id="frodoroutiermagique1591"/>
+      <children xsi:type="editmodel:AttributeEditModel" id="frodoroutiermagique1593"/>
+    </children>
+    <children xsi:type="editmodel:CompartmentEditModel" size="312,432">
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1594"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1596"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1599"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1604"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1611"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1613"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1617"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1619"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1621"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1624"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1626"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1628"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1630"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1632"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1634"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1636"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1638"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1640"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1642"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1646"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1649"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1651"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1653"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1656"/>
+    </children>
+    <children xsi:type="editmodel:CompartmentEditModel"/>
+    <sourceConnections xsi:type="editmodel:GeneralizationEditModel" id="frodoroutiermagique2739" connectionRouterKind="Manual" source="//@children.0" target="//@children.1" targetEnd="//@children.0/@sourceConnections.0/@children.1" sourceEnd="//@children.0/@sourceConnections.0/@children.0">
+      <children xsi:type="editmodel:AssociationEndEditModel" attachSource="true"/>
+      <children xsi:type="editmodel:AssociationEndEditModel"/>
+    </sourceConnections>
+    <classifierPreferences xsi:type="editmodel:UMLClassDiagramClassifierPreference" showStereotype="true" showMethodsParameterTypes="true" attributeSorter="Natural" methodSorter="Natural" innerClassSorter="Natural" showPrivateAttributes="true" showProtectedAttributes="true" showPublicAttributes="true" showPublicMethods="true" showPackageMethods="true" showPublicInnerClasses="true" showPackageInnerClasses="true"/>
+  </children>
+  <children xsi:type="editmodel:InterfaceEditModel" location="506,63" size="89,45" targetConnections="//@children.0/@sourceConnections.0 //@children.4/@sourceConnections.0" id="frodoroutiermagique47" runTimeClassModel="">
+    <children xsi:type="editmodel:CompartmentEditModel"/>
+    <children xsi:type="editmodel:CompartmentEditModel"/>
+    <children xsi:type="editmodel:CompartmentEditModel"/>
+    <classifierPreferences xsi:type="editmodel:UMLClassDiagramClassifierPreference" showStereotype="true" attributeSorter="Natural" methodSorter="Natural" innerClassSorter="Natural" showPrivateAttributes="true" showProtectedAttributes="true" showPublicAttributes="true" showPublicMethods="true" showPackageMethods="true" showPublicInnerClasses="true" showPackageInnerClasses="true"/>
+  </children>
+  <children xsi:type="editmodel:ClassEditModel" location="235,356" size="67,29" id="frodoroutiermagique1188" shortShow="true" runTimeClassModel="frodoroutiermagique1228;frodoroutiermagique1202;frodoroutiermagique1217;frodoroutiermagique1231;frodoroutiermagique1206;frodoroutiermagique1239;frodoroutiermagique1191;frodoroutiermagique1196;frodoroutiermagique1189;frodoroutiermagique1200;frodoroutiermagique1245;frodoroutiermagique1204;frodoroutiermagique1242;frodoroutiermagique1233;frodoroutiermagique1211;frodoroutiermagique1208;frodoroutiermagique1198;frodoroutiermagique1236;frodoroutiermagique1224;frodoroutiermagique1220;frodoroutiermagique1194;frodoroutiermagique1214">
+    <children xsi:type="editmodel:CompartmentEditModel"/>
+    <children xsi:type="editmodel:CompartmentEditModel" size="205,252">
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1189"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1191"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1208"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1211"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1214"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1217"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1220"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1224"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1231"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1233"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1236"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1239"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1242"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1245"/>
+    </children>
+    <children xsi:type="editmodel:CompartmentEditModel"/>
+    <sourceConnections xsi:type="editmodel:GeneralizationEditModel" id="frodoroutiermagique2655" connectionRouterKind="Manual" source="//@children.2" target="//@children.3" targetEnd="//@children.2/@sourceConnections.0/@children.1" sourceEnd="//@children.2/@sourceConnections.0/@children.0">
+      <children xsi:type="editmodel:AssociationEndEditModel" attachSource="true"/>
+      <children xsi:type="editmodel:AssociationEndEditModel"/>
+    </sourceConnections>
+    <classifierPreferences xsi:type="editmodel:UMLClassDiagramClassifierPreference" showStereotype="true" showMethodsParameterTypes="true" attributeSorter="Natural" methodSorter="Natural" innerClassSorter="Natural" showPrivateAttributes="true" showProtectedAttributes="true" showPublicAttributes="true" showPublicMethods="true" showPackageMethods="true" showPublicInnerClasses="true" showPackageInnerClasses="true"/>
+  </children>
+  <children xsi:type="editmodel:ClassEditModel" location="206,202" size="121,29" targetConnections="//@children.2/@sourceConnections.0" id="frodoroutiermagique1020" shortShow="true" runTimeClassModel="frodoroutiermagique1105;frodoroutiermagique1025;frodoroutiermagique1041;frodoroutiermagique1069;frodoroutiermagique1051;frodoroutiermagique1048;frodoroutiermagique1061;frodoroutiermagique1038;frodoroutiermagique1072;frodoroutiermagique1099;frodoroutiermagique1089;frodoroutiermagique1023;frodoroutiermagique1074;frodoroutiermagique1036;frodoroutiermagique1058;frodoroutiermagique1030;frodoroutiermagique1045;frodoroutiermagique1101;frodoroutiermagique1066;frodoroutiermagique1077;frodoroutiermagique1081;frodoroutiermagique1033;frodoroutiermagique1108;frodoroutiermagique1055;frodoroutiermagique1093;frodoroutiermagique1021;frodoroutiermagique1043;frodoroutiermagique1053;frodoroutiermagique1085;frodoroutiermagique1096">
+    <children xsi:type="editmodel:CompartmentEditModel" size="256,90">
+      <children xsi:type="editmodel:AttributeEditModel" id="frodoroutiermagique1021"/>
+      <children xsi:type="editmodel:AttributeEditModel" id="frodoroutiermagique1023"/>
+      <children xsi:type="editmodel:AttributeEditModel" id="frodoroutiermagique1025"/>
+      <children xsi:type="editmodel:AttributeEditModel" id="frodoroutiermagique1030"/>
+      <children xsi:type="editmodel:AttributeEditModel" id="frodoroutiermagique1033"/>
+    </children>
+    <children xsi:type="editmodel:CompartmentEditModel" size="275,378">
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1036"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1038"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1045"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1048"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1051"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1055"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1058"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1061"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1066"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1069"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1072"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1074"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1077"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1081"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1085"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1089"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1093"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1099"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1101"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1105"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique1108"/>
+    </children>
+    <children xsi:type="editmodel:CompartmentEditModel"/>
+    <sourceConnections xsi:type="editmodel:GeneralizationEditModel" id="frodoroutiermagique2628" connectionRouterKind="Manual" source="//@children.3" target="//@children.4" targetEnd="//@children.3/@sourceConnections.0/@children.1" sourceEnd="//@children.3/@sourceConnections.0/@children.0">
+      <children xsi:type="editmodel:AssociationEndEditModel" attachSource="true"/>
+      <children xsi:type="editmodel:AssociationEndEditModel"/>
+    </sourceConnections>
+    <sourceConnections xsi:type="editmodel:DependencyEditModel" id="frodoroutiermagique1133" connectionRouterKind="Manhattan" source="//@children.3" target="//@children.5" targetEnd="//@children.3/@sourceConnections.1/@children.1" sourceEnd="//@children.3/@sourceConnections.1/@children.0">
+      <children xsi:type="editmodel:AssociationEndEditModel" location="120,0" attachSource="true"/>
+      <children xsi:type="editmodel:AssociationEndEditModel"/>
+    </sourceConnections>
+    <sourceConnections xsi:type="editmodel:DependencyEditModel" id="frodoroutiermagique1154" connectionRouterKind="Manhattan" source="//@children.3" target="//@children.0" targetEnd="//@children.3/@sourceConnections.2/@children.1" sourceEnd="//@children.3/@sourceConnections.2/@children.0">
+      <children xsi:type="editmodel:AssociationEndEditModel" location="121,12" attachSource="true"/>
+      <children xsi:type="editmodel:AssociationEndEditModel"/>
+    </sourceConnections>
+    <classifierPreferences xsi:type="editmodel:UMLClassDiagramClassifierPreference" showStereotype="true" showMethodsParameterTypes="true" attributeSorter="Natural" methodSorter="Natural" innerClassSorter="Natural" showPrivateAttributes="true" showProtectedAttributes="true" showPublicAttributes="true" showPublicMethods="true" showPackageMethods="true" showPublicInnerClasses="true" showPackageInnerClasses="true"/>
+  </children>
+  <children xsi:type="editmodel:ClassEditModel" location="200,72" size="132,29" targetConnections="//@children.3/@sourceConnections.0" id="frodoroutiermagique595" shortShow="true" runTimeClassModel="frodoroutiermagique782;frodoroutiermagique737;frodoroutiermagique603;frodoroutiermagique715;frodoroutiermagique811;frodoroutiermagique653;frodoroutiermagique709;frodoroutiermagique662;frodoroutiermagique900;frodoroutiermagique955;frodoroutiermagique718;frodoroutiermagique602;frodoroutiermagique792;frodoroutiermagique807;frodoroutiermagique742;frodoroutiermagique876;frodoroutiermagique698;frodoroutiermagique852;frodoroutiermagique915;frodoroutiermagique636;frodoroutiermagique802;frodoroutiermagique871;frodoroutiermagique969;frodoroutiermagique893;frodoroutiermagique605;frodoroutiermagique734;frodoroutiermagique767;frodoroutiermagique924;frodoroutiermagique612;frodoroutiermagique845;frodoroutiermagique692;frodoroutiermagique823;frodoroutiermagique758;frodoroutiermagique657;frodoroutiermagique596;frodoroutiermagique620;frodoroutiermagique907;frodoroutiermagique929;frodoroutiermagique721;frodoroutiermagique919;frodoroutiermagique859;frodoroutiermagique974;frodoroutiermagique623;frodoroutiermagique817;frodoroutiermagique819;frodoroutiermagique687;frodoroutiermagique610;frodoroutiermagique774;frodoroutiermagique752;frodoroutiermagique648;frodoroutiermagique730;frodoroutiermagique599;frodoroutiermagique638;frodoroutiermagique727;frodoroutiermagique675;frodoroutiermagique705;frodoroutiermagique755;frodoroutiermagique614;frodoroutiermagique978;frodoroutiermagique761;frodoroutiermagique678;frodoroutiermagique641;frodoroutiermagique966;frodoroutiermagique833;frodoroutiermagique887;frodoroutiermagique764;frodoroutiermagique963;frodoroutiermagique799;frodoroutiermagique867;frodoroutiermagique941;frodoroutiermagique598;frodoroutiermagique683;frodoroutiermagique633;frodoroutiermagique770;frodoroutiermagique668;frodoroutiermagique881;frodoroutiermagique607;frodoroutiermagique786;frodoroutiermagique618;frodoroutiermagique935;frodoroutiermagique629;frodoroutiermagique983;frodoroutiermagique948;frodoroutiermagique989;frodoroutiermagique724;frodoroutiermagique795;frodoroutiermagique645;frodoroutiermagique616;frodoroutiermagique626;frodoroutiermagique601;frodoroutiermagique839;frodoroutiermagique746;frodoroutiermagique777;frodoroutiermagique828">
+    <children xsi:type="editmodel:CompartmentEditModel" size="183,90">
+      <children xsi:type="editmodel:AttributeEditModel" id="frodoroutiermagique596"/>
+      <children xsi:type="editmodel:AttributeEditModel" id="frodoroutiermagique598"/>
+      <children xsi:type="editmodel:AttributeEditModel" id="frodoroutiermagique599"/>
+      <children xsi:type="editmodel:AttributeEditModel" id="frodoroutiermagique601"/>
+      <children xsi:type="editmodel:AttributeEditModel" id="frodoroutiermagique602"/>
+    </children>
+    <children xsi:type="editmodel:CompartmentEditModel" size="229,1476">
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique605"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique607"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique610"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique612"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique614"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique616"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique618"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique620"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique623"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique626"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique629"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique648"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique678"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique718"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique724"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique752"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique755"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique758"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique761"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique764"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique767"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique792"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique817"/>
+      <children xsi:type="editmodel:MethodEditModel" id="frodoroutiermagique963"/>
+    </children>
+    <children xsi:type="editmodel:CompartmentEditModel"/>
+    <sourceConnections xsi:type="editmodel:DependencyEditModel" id="frodoroutiermagique1003" connectionRouterKind="Manhattan" source="//@children.4" target="//@children.1" targetEnd="//@children.4/@sourceConnections.0/@children.1" sourceEnd="//@children.4/@sourceConnections.0/@children.0">
+      <children xsi:type="editmodel:AssociationEndEditModel" location="132,0" attachSource="true"/>
+      <children xsi:type="editmodel:AssociationEndEditModel"/>
+    </sourceConnections>
+    <classifierPreferences xsi:type="editmodel:UMLClassDiagramClassifierPreference" showStereotype="true" showMethodsParameterTypes="true" attributeSorter="Natural" methodSorter="Natural" innerClassSorter="Natural" showPrivateAttributes="true" showProtectedAttributes="true" showPublicAttributes="true" showPublicMethods="true" showPackageMethods="true" showPublicInnerClasses="true" showPackageInnerClasses="true"/>
+  </children>
+  <children xsi:type="editmodel:InterfaceEditModel" location="5,195" size="84,45" targetConnections="//@children.3/@sourceConnections.1" id="frodoroutiermagique152" runTimeClassModel="">
+    <children xsi:type="editmodel:CompartmentEditModel"/>
+    <children xsi:type="editmodel:CompartmentEditModel"/>
+    <children xsi:type="editmodel:CompartmentEditModel"/>
+    <classifierPreferences xsi:type="editmodel:UMLClassDiagramClassifierPreference" showStereotype="true" attributeSorter="Natural" methodSorter="Natural" innerClassSorter="Natural" showPrivateAttributes="true" showProtectedAttributes="true" showPublicAttributes="true" showPublicMethods="true" showPackageMethods="true" showPublicInnerClasses="true" showPackageInnerClasses="true"/>
+  </children>
+  <classDiagramPreferences xsi:type="editmodel:UMLClassDiagramPreference" attributeSorter="Natural" methodSorter="Natural" innerClassSorter="Natural" showPrivateAttributes="true" showProtectedAttributes="true" showPublicAttributes="true" showPublicMethods="true" showPackageMethods="true" showPublicInnerClasses="true" showPackageInnerClasses="true" showInterfaceStereotype="true" showClassStereotype="true" showPackageStereotype="true"/>
+</editmodel:ClassDiagramEditModel>

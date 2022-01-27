@@ -1,0 +1,93 @@
+you need java >= jdk 1.* 
+you need the magique.jar (http://www.lifl.fr/MAGIQUE)
+
+LE PROBLEME :
+*************
+
+Il s'agit de réaliser un système multi-agents coopérants dans le même
+but commun : explorer un labyrinthe.
+
+
+
+PRESENTATION :
+**************
+
+Ce sujet a été donné  comme projet à des étudiants du DEA de Lille,
+qui ne connaissaient pas Magique initialement, mis à part une rapide
+présentation des concepts.
+
+Voici donc deux réalisations
+      * labyrinth1.zip
+      * labyrinth2.zip
+
+
+
+POUR LABYRINTH1
+***************
+Dans labyrinth1.zip, il y a un fichier documentation.pdf, écrit par les
+étudiants et qui donne plus de renseignement sur le fonctionnement de
+leur projet.
+
+
+WINDOWS/DOS :
+java -cp %CLASSPATH%;labyrinth1.jar AllImp
+
+UNIX/Linux :
+java -cp $CLASSPATH:labyrinth2.jar AllImp
+
+ouverture de 5 fenêtres : 
+	  3 explorateurs :	
+	    * un aléatoire, 
+	    * un "antihoraire" qui privilégie la direction la plus a l'ouest
+	      possible, sinon a celle le plus au sud, puis celle la
+	      plus a l'est et pour finir celle la plus au nord.
+	    * un "antihoraire" qui privilégie la direction la plus au
+	      nord possible, sinon a celle le plus a l'est, puis celle
+	      le plus au sud et pour finir celle le plus a l'ouest.
+	  1 contrôleur : uniquement ce qui a été exploré pas l'ensemble
+	  1 environnement : le labyrinthe et ce qui a été exploré
+
+Lors de la recherche d'une nouvelle zone à explorer, le chemin à
+suivre (le plus court calculé par un A*) est symbolisé par des points
+rouges.
+
+En fin d'exploration chaque agent annonce dans la fenêtre de lancement
+le nombre de cases qu'il a parcourue et parmi celle là le nombre de
+cases "redondantes".
+
+
+
+POUR LABYRINTH2
+***************
+Dans labyrinth2.zip, il y a un fichier readme.txt écrit, par les
+étudiants et qui donne plus de renseignement sur le fonctionnement de
+leur projet.
+
+Pour un démarrage rapide, lancer :
+
+WINDOWS/DOS :
+java -cp %CLASSPATH%;labyrinth2.jar Exploration.ExplorationDeLabyrinthe [0 -n n]
+
+UNIX/Linux :
+java -cp $CLASSPATH:labyrinth2.jar Exploration.ExplorationDeLabyrinthe [0 -n n]
+
+où	n = le nombre d'explorateurs,  = 3 par défaut
+
+n+2 fenêtre apparaissent alors : une par explorateur + une pour le
+controleur + une pour l'environnement
+
+Strategie de deplacement des explorateurs:
+	  - Les agents choisissent comme direction d'abord le
+	  Nord,puis si le Nord n'est pas accessible le Sud, ensuite
+	  l'Est et enfin l'Ouest.
+	  - Lorsqu'ils sont dans un cul de sac ou sur une case déjà
+	  marquée, les agents explorateurs déploient un arbre pour
+	  trouver la case non explorée la plus proche.
+
+dans les fenêtres explorateurs on voit apparaîtr en rouge les cases
+découvertes pas l'agent et en vert les cases connus suite à un échange
+d'information avec d'autrs agents explorateur.
+
+En fin d'exploration chaque agent annonce dans la fenêtre de lancement
+le nombre de cases qu'il a parcourue et parmi celle là le nombre de
+cases qu'il a lui-même découvert.

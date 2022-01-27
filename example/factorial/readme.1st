@@ -1,0 +1,136 @@
+you need java >= jdk 1.* 
+you need the magique.jar (http://www.lifl.fr/MAGIQUE)
+you need a TCP/IP support on your host (for rmi)
+
+you may want to use the magiqueGui.jar (see http://www.lifl.fr/MAGIQUE)
+
+DISTRIBUTED COMUTING :
+**********************
+
+the PB :
+compute n! with one agent who does not know how to multiplicate but knows n!
+algorithm and some agents who can only multiply 2 integers.
+multiplications are uniformly distributed over all the multiplier
+agents and asynchronously performed.
+ 
+
+we use 4 kinds of agents but 2 of them (super and go) are used only to
+let you enough time to start all the mulitpliers and factorial agents.
+
+
+to launch the "demo" :
+********************
+
+Each agent is supposed to be launched on different machine, then one
+platform by machine. The default magique-rmi port (4444) is supposed
+to be used therefore no other platform (with that port) must be used
+at the same time... To have a different port, give this number as
+parameter to Platform constructor (warning : then you may have to
+change the connectToBoss...). (nothing to change in local version)
+
+Do not forget to change hostname in the VisualisateurImp.java (in
+...connectToBoss("...@HOSTNAME:PORT") ), this must be set to the name
+of the machine where the SuperImp is run.
+
+compile with javac *.java
+
+then
+
+launch Super agent in a console on the chosen host :
+   java fr.lifl.magique.Start [4444] Super
+
+launch FactorielleAgent agent in a console on the chosen host :
+
+   java  fr.lifl.magique.Start [5555] FactorielleAgent n (for n!)
+NB : no BigInteger, so chose a rather small value for n...
+
+launch as many MultiplierAgent as you want on any host you have chosen:
+
+	java fr.lifl.magique.Start [xxxx] MultiplierAgent NAME (chose different name for each agent)
+						    
+launch the Go "agent" to start the calculus
+      java  fr.lifl.magique.Start [yyyy] Go
+
+
+and then n! is computed !!!
+
+you can add dynamically agent during execution : 
+since the work can be done rather quickly replace the mult method in
+MultiplierAgent by this :
+
+    public Integer mult(BigInteger x, BigInteger y) {
+	perform("display",new Object[]{" multiplie "+ x+" par "+y});
+	try {//pause
+	    Thread.sleep(2500);
+	}
+	catch(Exception e) {}
+	return x.multiply(y);
+    }    
+
+the pause will give you enough time to launch at least one new agent
+before calculus is complete... try this :
+
+do what is described above with n=11 and 2 multiplier agents and as
+soon as you have launch the go agent, launch a third multiplier and
+this will be used to complete the calculus.
+
+
+
+LOCAL :
+*******
+You can test the demo on a single host using the TestImp file (only
+two multipliers) :
+run :
+    java fr.lifl.magique.Start TestImp traceLevel n 
+    (for n!)
+
+
+GUI :
+*****
+to use the interface to run the example, start the interface and do
+not forget to add the directory where the Factorial files are located to the
+classpath :
+
+* in a shell window :
+java -cp %CLASSPATH%;FACTORIAL_DIR_PATH fr.lifl.magique.gui.LanceurAgents 
+(dos/windows)
+
+java -cp $CLASSPATH$;FACTORIAL_DIR_PATH fr.lifl.magique.gui.LanceurAgents 
+(unix/linux)
+ 
+* in File menu chose :load, and in the FACTORIAL_DIR_PATH open the
+  factorial.magic file. (the hierarchical "SMA" appears)
+
+* in View menu chose to see "Execution frame", in execution chose to
+Show "Console Tools"
+
+* in "Computers" subwindow, edit the computers you want to use to run
+the agents (it will be convenient to File-Save the config) .  On these
+computers you must run the "magique daemon" (not a daemon in the unix
+sense), this is done with the command : java -jar magique.jar [port]
+on these computer. The used port (default is 4444) must be set in the
+"Computers" window (right-click on the computer name).
+
+You do not need to put the class files of the Collatz package on the
+remote computers, the needed bytecoe will be automatically transferred
+when needed.
+
+* for each agent chose the computer : select the agent, then click on
+the chosen computer
+
+* click on the execute button : one window by agent appears in
+the execution frame 
+
+* in the Console tools (menu "show" of the Execution window), enter :  
+" agent.perform(Fact,"factorielle",un entier n); "
+to compute n! (we use java.math.BigInteger, so...)
+or "print(agent.askNow(Fact,"factorielle",un entier n); " to have the
+result !
+
+* the result appears now in the execute frames
+
+
+NOTE : you can add a new adder agent (do not forget to learn the
+MultiplierSkill to this agent, with first parameter set to "this") and
+you see that multiplications are performed by different agents.
+

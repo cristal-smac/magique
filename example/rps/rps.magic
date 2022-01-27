@@ -1,0 +1,41 @@
+DEFAGENT "bank"
+  CLASSE "fr.lifl.magique.Agent"
+  CLASSPATH ""
+  ISCOLLAPSED "false"
+  COMPUTER "buxus.lifl.fr"
+  POSITION 510 51
+  DEFSKILL "BankSkill"     CONSTRUCTOR "public BankSkill(fr.lifl.magique.Agent)"
+     CLASSPATH "E:.jc.java.toy.rps."
+     ARG "this"
+   ENDDEF
+ENDDEF
+DEFAGENT "Human"
+  CLASSE "fr.lifl.magique.Agent"
+  CLASSPATH ""
+  ISCOLLAPSED "false"
+  COMPUTER "buxus.lifl.fr"
+  POSITION 404 153
+  DEFSKILL "HumanPlayerSkill"     CONSTRUCTOR "public HumanPlayerSkill(fr.lifl.magique.Agent)"
+     CLASSPATH "E:.jc.java.toy.rps."
+     ARG "this"
+   ENDDEF
+ENDDEF
+DEFAGENT "Random"
+  CLASSE "fr.lifl.magique.Agent"
+  CLASSPATH ""
+  ISCOLLAPSED "false"
+  COMPUTER "buxus.lifl.fr"
+  POSITION 594 152
+  DEFSKILL "RandomPlayerSkill"     CONSTRUCTOR "public RandomPlayerSkill(fr.lifl.magique.Agent)"
+     CLASSPATH "E:.jc.java.toy.rps."
+     ARG "this"
+   ENDDEF
+ENDDEF
+DEFLINK
+  PARENT "bank"
+  CHILD "Human"
+ENDDEF
+DEFLINK
+  PARENT "bank"
+  CHILD "Random"
+ENDDEF

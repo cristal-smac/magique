@@ -1,0 +1,46 @@
+This buffer is for notes you don't want to save, and for Lisp evaluation.
+If you want to create a file, visit that file with C-x C-f,
+then enter the text in that file's own buffer.
+
+Service required ...service paid, delay = 676 ms
+Service required ...service paid, delay = 307 ms
+Service required ...service paid, delay = 295 ms
+Service required ...service paid, delay = 312 ms
+Service required ...service paid, delay = 311 ms
+Service required ...service paid, delay = 279 ms
+Service required ...service paid, delay = 249 ms
+Service required ...service paid, delay = 302 ms
+134.206.10.82:4444 not yet known
+connection with 134.206.10.82:4444 performed
+Service required ...service paid, delay = 123 ms
+Service required ...service paid, delay = 145 ms
+Service required ...service paid, delay = 126 ms
+Service required ...service paid, delay = 134 ms
+Service required ...service paid, delay = 121 ms
+Service required ...service paid, delay = 124 ms
+Service required ...service paid, delay = 135 ms
+Service required ...service paid, delay = 136 ms
+Service required ...service paid, delay = 154 ms
+Service required ...service paid, delay = 126 ms
+>>>> death of Provider2@134.206.10.82:4444
+Service required ...service paid, delay = 341 ms
+Service required ...service paid, delay = 301 ms
+Service required ...service paid, delay = 311 ms
+Service required ...service paid, delay = 308 ms
+Service required ...service paid, delay = 337 ms
+Service required ...service paid, delay = 325 ms
+Service required ...service paid, delay = 329 ms
+Service required ...service paid, delay = 332 ms
+Service required ...service paid, delay = 343 ms
+172.16.12.155:5555 not yet known
+connection with 172.16.12.155:5555 performed
+Service required ...service paid, delay = 124 ms
+Service required ...service paid, delay = 121 ms
+Service required ...service paid, delay = 118 ms
+Service required ...service paid, delay = 115 ms
+Service required ...service paid, delay = 116 ms
+Service required ...service paid, delay = 122 ms
+Service required ...service paid, delay = 123 ms
+Service required ...service paid, delay = 116 ms
+Service required ...service paid, delay = 122 ms
+

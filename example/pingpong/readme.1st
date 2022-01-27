@@ -1,0 +1,96 @@
+you need java >= jdk 1.* 
+you need the magique.jar (http://www.lifl.fr/MAGIQUE)
+you need a TCP/IP communication support for RMI
+
+you may want to use the magiqueGui.jar (see http://www.lifl.fr/MAGIQUE)
+
+Ping - Pong (trivial example)
+-----------
+
+This is probably the most simple application you can write with
+Magique (something like the classical "hello world") with several
+agents and a hierearchy.
+
+It consists in an agent who says "Ping" to another who answers with
+"Pong". These messages are writtent on the standard output.
+
+A supervisor is used to acting as an intermediate between this agent.
+
+
+RUN THE DEMO :
+*************
+You can chose between local or distributed version.
+
+Each agent is supposed to be launched on different machine, then one
+platform by machine. The default magique-rmi port (4444) is supposed
+to be used therefore no otyher platform (with that port) must be used
+at the same time... To have a different port, give this number as
+parameter to Platform constructor (warning : then you may have to
+change the connectToBoss...) (nothing to change in local version)
+
+Do not forget to change hostname in the VisualisateurImp.java (in
+...connectToBoss("...@HOSTNAME")), this must be set to the name
+of the machine where the SuperImp is run.
+
+compile with javac *.java
+
+DISTRIBUTED
+***********
+
+java fr.lifl.magique.Start SuperImp [4444 traceLevel]
+and
+java fr.lifl.magique.Start PingImp [5555 superhost:port traceLevel]
+java fr.lifl.magique.Start PongImp [6666 superhost:port traceLevel]
+
+on different hosts
+
+LOCAL :
+*******
+You can test the demo on a single host using the TestImp file (only
+two agents) :
+run :
+    java fr.lifl.magique.Start TestImp
+
+GUI :
+*****
+to use the interface to run the example, start the interface and do
+not forget to add the directory where the pingpong/withSkill files are located to the
+classpath :
+
+* in a shell window :
+java -cp %CLASSPATH%;PINGPONG_withSkill_DIR_PATH fr.lifl.magique.gui.LanceurAgents 
+(dos/windows)
+
+java -cp $CLASSPATH$;PINGPONG_withSkill_DIR_PATH
+fr.lifl.magique.gui.LanceurAgents (unix/linux)
+ 
+* in File menu chose :load, and in the PINGPONG_withSkill_DIR_PATH
+open the pingpong.magic file. (the hierarchical "SMA" appears)
+
+* in View menu chose to see "Execution frame", in execution chose to
+Show "Console Tools"
+
+* in "Computers" subwindow, edit the computers you want to use to run
+the agents (it will be convenient to File-Save the config).
+On these computers you must run the "magique daemon" (not a daemon in
+the unix sense), this is done with the command : java -jar magique.jar
+[portnumber] on these computer. The port used (default is 4444) must
+be set in the "Computers" window (right-click on the computer name).
+
+You do not need to put the class files of the Collatz package on the
+remote computers, the needed bytecoe will be automatically transferred
+when needed.
+
+
+
+* for each agent chose the computer : select the agent, then click on
+the chosen computer
+
+* click on the execute button : 3 windows (one by agent) appears in
+the execution frame 
+
+* in the Console tools (menu "show" of the Execution window) enter : 
+"agent.perform(Ping,"ping", som integer n); " 
+(this asks the ping agent to execute the "Ping" skill, Pong will answer etc.)
+
+* everything appears now in the execution frames

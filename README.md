@@ -76,5 +76,40 @@ Il nous reste à démarrer *Pong* de manière similaire :
 
 On constate alors dans le terminal du superviseur la connexion de l'agent *Pong*, ainsi que dans les terminaux des agents *Ping* et *Ping* l'envoi infini des messages 'ping' et 'pong' entre les deux agents.
 
-Il faut mettre fin à leur partie de ping-ping infinie par `Ctrl C` dans l'un des terminaux.
+Il faut mettre fin à leur partie de ping-pong infinie par `Ctrl C` dans l'un des terminaux.
 
+On peut augmenter le niveau de trace pour voir les messages échangés en ajoutant un paramètre à l'exécution. Le niveau de trace va de 0 à 5 :
+```bash
+cheminVersJDK18/bin/java -classpath ".;../../magique18.jar" fr.lifl.magique.Start PingImp  5555 192.168.100.001:4444 5
+```
+
+(pour le superviseur il devient nécessaire de préciser la valeur du port 4444 avant le niveau de trace).
+
+### Exécution avec l'interface graphique
+
+Il faut démarrrer un agent plateforme :
+```bash
+.../magique/example/pingpong> cheminVersJDK18/bin/java -classpath ".;../../magique18.jar" fr.lifl.magique.PlatformLauncher
+```
+
+Puis l'interface graphique
+
+```bash
+.../magique/example/pingpong> cheminVersJDK18/bin/java -cp ".;../../magiqueGUI-18.jar" fr.lifl.magique.gui.LanceurAgents
+```
+
+Charger la configuration : menu *File* puis *load* : `pingpong.magic`.
+
+Editer l'adresse IP de l'ordinateur, puis sélectionner cahque agent puis cliquer sur l'hôte pour mettre à jour l'adresse de l'agent.
+
+![ajuster les adresses IP](./images/gui-computerIP.png)
+
+Cliquer ensuite sur *Execute*, la fenêtre d'exécution s'ouvre et vous pouvez réorganiser les "sous"-fenêtre par agent.
+
+Sélectionnez *Show* puis "Console Tools". Dans la fenêtre qui s'ouvre saisissez :
+
+`agent.perform(Ping,"ping",1)`
+
+![exécution](./images/gui-execution.png)
+
+et validez pour observer l'exécution.

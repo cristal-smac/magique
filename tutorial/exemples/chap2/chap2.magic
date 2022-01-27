@@ -1,0 +1,37 @@
+DEFAGENT "super"
+  CLASSE "fr.lifl.magique.Agent"
+  CLASSPATH ""
+  ISCOLLAPSED "false"
+  COMPUTER "buxus.lifl.fr"
+  POSITION 291 33
+ENDDEF
+DEFAGENT "ping"
+  CLASSE "fr.lifl.magique.Agent"
+  CLASSPATH ""
+  ISCOLLAPSED "false"
+  COMPUTER "buxus.lifl.fr"
+  POSITION 236 113
+  DEFSKILL "chap2.PingSkill2"     CONSTRUCTOR "public chap2.PingSkill2(fr.lifl.magique.Agent)"
+     CLASSPATH "D:.jc.java.magique.tutorial.exemples.classes.chap2."
+     ARG "this"
+   ENDDEF
+ENDDEF
+DEFAGENT "pong"
+  CLASSE "fr.lifl.magique.Agent"
+  CLASSPATH ""
+  ISCOLLAPSED "false"
+  COMPUTER "buxus.lifl.fr"
+  POSITION 346 113
+  DEFSKILL "chap2.PongSkill2"     CONSTRUCTOR "public chap2.PongSkill2(fr.lifl.magique.Agent)"
+     CLASSPATH "D:.jc.java.magique.tutorial.exemples.classes.chap2."
+     ARG "this"
+   ENDDEF
+ENDDEF
+DEFLINK
+  PARENT "super"
+  CHILD "ping"
+ENDDEF
+DEFLINK
+  PARENT "super"
+  CHILD "pong"
+ENDDEF

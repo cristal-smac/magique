@@ -1,0 +1,56 @@
+DEFAGENT "mult1"
+  CLASSE "fr.lifl.magique.Agent"
+  CLASSPATH ""
+  ISCOLLAPSED "false"
+  COMPUTER "buxus.lifl.fr"
+  POSITION 298 120
+  DEFSKILL "MultiplierSkill"     CONSTRUCTOR "public MultiplierSkill(fr.lifl.magique.Agent)"
+     CLASSPATH "D:.jc.java.toy.factorial.withSkill."
+     ARG "this"
+   ENDDEF
+ENDDEF
+DEFAGENT "mult3"
+  CLASSE "fr.lifl.magique.Agent"
+  CLASSPATH ""
+  ISCOLLAPSED "false"
+  COMPUTER "buxus.lifl.fr"
+  POSITION 518 120
+  DEFSKILL "MultiplierSkill"     CONSTRUCTOR "public MultiplierSkill(fr.lifl.magique.Agent)"
+     CLASSPATH "D:.jc.java.toy.factorial.withSkill."
+     ARG "this"
+   ENDDEF
+ENDDEF
+DEFAGENT "mult2"
+  CLASSE "fr.lifl.magique.Agent"
+  CLASSPATH ""
+  ISCOLLAPSED "false"
+  COMPUTER "buxus.lifl.fr"
+  POSITION 408 120
+  DEFSKILL "MultiplierSkill"     CONSTRUCTOR "public MultiplierSkill(fr.lifl.magique.Agent)"
+     CLASSPATH "D:.jc.java.toy.factorial.withSkill."
+     ARG "this"
+   ENDDEF
+ENDDEF
+DEFAGENT "Fact"
+  CLASSE "fr.lifl.magique.Agent"
+  CLASSPATH ""
+  ISCOLLAPSED "false"
+  COMPUTER "buxus.lifl.fr"
+  POSITION 408 40
+  DEFSKILL "FactorialSkill"     CONSTRUCTOR "public FactorialSkill(fr.lifl.magique.Agent)"
+     CLASSPATH "E:.jc.java.toy.factorial."
+     ARG "this"
+   ENDDEF
+ENDDEF
+DEFLINK
+  PARENT "Fact"
+  CHILD "mult1"
+ENDDEF
+DEFLINK
+  PARENT "Fact"
+  CHILD "mult2"
+ENDDEF
+DEFLINK
+  PARENT "Fact"
+  CHILD "mult3"
+ENDDEF

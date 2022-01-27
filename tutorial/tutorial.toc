@@ -1,0 +1,42 @@
+\contentsline {paragraph}{Pr\'erequis}{5}
+\contentsline {chapter}{\numberline {1}Introduction}{7}
+\contentsline {section}{\numberline {1.1}Survol et principaux concepts}{8}
+\contentsline {chapter}{\numberline {2}Les premiers pas}{9}
+\contentsline {section}{\numberline {2.1}Au d\'ebut \'etait l'agent}{9}
+\contentsline {subsection}{\numberline {2.1.1}Premier agent\nobreakspace {}: premi\`ere comp\'etence}{9}
+\contentsline {subsection}{\numberline {2.1.2}Plate-forme}{10}
+\contentsline {subsection}{\numberline {2.1.3}Premier programme}{10}
+\contentsline {section}{\numberline {2.2}Puis ils furent deux et communiqu\`erent.}{11}
+\contentsline {subsection}{\numberline {2.2.1}Connexion directe}{11}
+\contentsline {subsection}{\numberline {2.2.2}Utilisation d'un superviseur}{13}
+\contentsline {section}{\numberline {2.3}Le routage des messages}{15}
+\contentsline {section}{\numberline {2.4}Le syst\`eme de trace}{17}
+\contentsline {paragraph}{Remarque. }{17}
+\contentsline {section}{\numberline {2.5}Enfin les agents s'\'eloign\`erent.}{18}
+\contentsline {paragraph}{Remarque. }{19}
+\contentsline {section}{\numberline {2.6}Les erreurs classiques}{19}
+\contentsline {chapter}{\numberline {3}La notion de service}{21}
+\contentsline {chapter}{\numberline {4}Diff\'erentes m\'ethodes de communication}{23}
+\contentsline {section}{\numberline {4.1}Le passage de param\`etres}{23}
+\contentsline {subsection}{\numberline {4.1.1}encore d'autres m\'ethodes de communication ...}{26}
+\contentsline {section}{\numberline {4.2}Messages synchrones ou asynchrones}{26}
+\contentsline {subsection}{\numberline {4.2.1}Traitement synchrone}{27}
+\contentsline {subsection}{\numberline {4.2.2}Traitement asynchrone}{29}
+\contentsline {section}{\numberline {4.3}Test de primarit\'e}{29}
+\contentsline {subsection}{\numberline {4.3.1}Un autre point de vue}{33}
+\contentsline {chapter}{\numberline {5}Synth\`ese\nobreakspace {}: un petit exemple complet}{35}
+\contentsline {section}{\numberline {5.1}Le probl\`eme}{35}
+\contentsline {section}{\numberline {5.2}Les comp\'etences}{35}
+\contentsline {section}{\numberline {5.3}La hi\'erarchie et les agents}{37}
+\contentsline {section}{\numberline {5.4}}{40}
+\contentsline {chapter}{\numberline {6}Dynamicit\'e}{41}
+\contentsline {section}{\numberline {6.1}\'Evolution individuelle}{41}
+\contentsline {subsection}{\numberline {6.1.1}Acquisition dynamique de comp\'etence}{41}
+\contentsline {subsection}{\numberline {6.1.2}Oubli dynamique de comp\'etence}{41}
+\contentsline {subsection}{\numberline {6.1.3}\'Enseignement dynamique de comp\'etence}{43}
+\contentsline {section}{\numberline {6.2}Cr\'eation dynamique d'agents}{45}
+\contentsline {subsection}{\numberline {6.2.1}Cr\'eation sur la m\^eme plate-forme}{45}
+\contentsline {subsection}{\numberline {6.2.2}Cr\'eation distante d'agents}{45}
+\contentsline {section}{\numberline {6.3}Une dynamicit\'e transparente}{47}
+\contentsline {chapter}{\numberline {7}D\'econnexion et mort d'un agent}{49}
+\contentsline {chapter}{\numberline {8}L'environnement graphique d'ex\'ecution}{53}

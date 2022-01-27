@@ -1,0 +1,35 @@
+Calcul trivial en asynchrone
+
+
+Petit programme permettant d'illustrer le fonctionnement de Magique
+en asynchrone avec la methode ask
+
+
+Lancement
+
+
+        Dans FImp.java GImp.java et LanceurImp.java, changez le nom
+        de machine localhost par celui de la machine sur laquelle vous
+        lancerez le superviseur.
+
+        Recompiler l'ensemble du package
+                javac *.java
+
+
+        Preparer quatre shells de preference sur quatre machines differentes
+        lancez dans chacun des shells
+
+	java fr.lifl.magique.Start chap4.SuperImp 4444 3
+
+	java fr.lifl.magique.Start chap4.FImp 5555 <SuperImphost:4444>
+
+	java fr.lifl.magique.Start chap4.GImp 6666 <SuperImphost:4444>
+
+	java fr.lifl.magique.Start chap4.LanceurImp 7777 <SuperImphost:4444>
+
+
+        Au bout de 15s vous obtiendrez le resultat dans la fenetre du
+        superviseur
+
+
+PM
