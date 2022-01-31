@@ -29,10 +29,16 @@ Il peut être nécessaire de commencer par compiler les codes fournis
 .../magique/example/pingpong> cheminVersJDK18/bin/javac -classpath .:../../magique18.jar *.java
 ```
 
+(Sous windows, il faudra replacer le ":" dans l'option classpath par ";", il est aussi possible qu'il faille mettre des guillemets, ce qui donnerait :
+```windows
+.../magique/example/pingpong> cheminVersJDK18/bin/javac -classpath ".;../../magique18.jar" *.java
+)
+
+
 Dans un premier terminal, il faut démarrer l'agent **Superviseur**
 
 ```bash
-.../magique/example/pingpong> cheminVersJDK18/bin/java -classpath ".;../../magique18.jar" fr.lifl.magique.Start SuperImp
+.../magique/example/pingpong> cheminVersJDK18/bin/java -classpath .:../../magique18.jar fr.lifl.magique.Start SuperImp
 ```
 On obtient la trace :
 ```bash
@@ -55,7 +61,7 @@ Les agents *Ping* et *Pong* étant exécutés sur le même ordinateur, il va fal
 
 Ce qui donne pour chacun *Ping* :
 ```bash
-.../magique/example/pingpong> cheminVersJDK18/bin/java -classpath ".;../../magique18.jar" fr.lifl.magique.Start PingImp  5555 192.168.100.001:4444
+.../magique/example/pingpong> cheminVersJDK18/bin/java -classpath .:../../magique18.jar fr.lifl.magique.Start PingImp  5555 192.168.100.001:4444
 ```
 et la trace où apparaît les informations de connexion au superviseur
 ```bash
@@ -79,7 +85,7 @@ connection with 134.206.12.150:5555 performed
 Il nous reste à démarrer *Pong* de manière similaire :
 
 ```bash
-.../magique/example/pingpong> cheminVersJDK18/bin/java -classpath ".;../../magique18.jar" fr.lifl.magique.Start PongImp 6666 192.168.100.001:4444
+.../magique/example/pingpong> cheminVersJDK18/bin/java -classpath .:../../magique18.jar fr.lifl.magique.Start PongImp 6666 192.168.100.001:4444
 ```
 
 On constate alors dans le terminal du superviseur la connexion de l'agent *Pong*, ainsi que dans les terminaux des agents *Ping* et *Ping* l'envoi infini des messages 'ping' et 'pong' entre les deux agents.
@@ -88,7 +94,7 @@ Il faut mettre fin à leur partie de ping-pong infinie par `Ctrl C` dans l'un de
 
 On peut augmenter le niveau de trace pour voir les messages échangés en ajoutant un paramètre à l'exécution. Le niveau de trace va de 0 à 5 :
 ```bash
-cheminVersJDK18/bin/java -classpath ".;../../magique18.jar" fr.lifl.magique.Start PingImp  5555 192.168.100.001:4444 5
+cheminVersJDK18/bin/java -classpath .:../../magique18.jar fr.lifl.magique.Start PingImp  5555 192.168.100.001:4444 5
 ```
 
 (pour le superviseur il devient nécessaire de préciser la valeur du port 4444 avant le niveau de trace).
@@ -97,13 +103,13 @@ cheminVersJDK18/bin/java -classpath ".;../../magique18.jar" fr.lifl.magique.Star
 
 Il faut démarrrer un agent plateforme :
 ```bash
-.../magique/example/pingpong> cheminVersJDK18/bin/java -classpath ".;../../magique18.jar" fr.lifl.magique.PlatformLauncher
+.../magique/example/pingpong> cheminVersJDK18/bin/java -classpath .:../../magique18.jar fr.lifl.magique.PlatformLauncher
 ```
 
 Puis l'interface graphique
 
 ```bash
-.../magique/example/pingpong> cheminVersJDK18/bin/java -cp ".;../../magiqueGUI-18.jar" fr.lifl.magique.gui.LanceurAgents
+.../magique/example/pingpong> cheminVersJDK18/bin/java -cp .:../../magiqueGUI-18.jar fr.lifl.magique.gui.LanceurAgents
 ```
 
 Charger la configuration : menu *File* puis *load* : `pingpong.magic`.
