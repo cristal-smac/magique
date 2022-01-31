@@ -1,5 +1,12 @@
 # Magique
 
+Vous pouvez découvrir le fonctionnement de Magique dans [le tutoriel](./tutorial/tutorial.pdf).
+
+
+Ce tutoriel s'accompagne d'exemples. D'autres exemples se trouvent dans le dossier `example` (les liens vers `www.lifl.fr/magique` sont cassés et les examples `Rage` et `vente` sont difficilement exploitables en l'état).
+
+## Exécution de Magique
+
 La version actuelle de Magique nécessite d'utiliser la version 8 du Java Development Kit.  
 
 Cette version doit être téléchargée [sur le site d'Oracle](https://www.oracle.com/java/technologies/javase/javase8-archive-downloads.html), puis installée. Mémorisez le dossier dans lequel vous ferez cette installation. Nous le noterons par la suite `cheminVersJDK18/`.
@@ -113,3 +120,17 @@ Sélectionnez *Show* puis "Console Tools". Dans la fenêtre qui s'ouvre saisisse
 ![exécution](./images/gui-execution.png)
 
 et validez pour observer l'exécution.
+
+
+## Bilbiographie
+ * Philippe Mathieu, Jean-Christophe Routier, Yann Secq. [RIO: Roles, Interactions and Organizations](./publis/ceemas03-final.pdf). Proceedings of the 3rd International/Central and Eastern European Conference on Multi-Agent Systems (CEEMAS 2003), 2003, undef, France. pp.147--157. [hal-00731975]
+ * Philippe Mathieu, Jean-Christophe Routier, Yann Secq. [Using agents to build a distributed calculus framework](./publis/aisbj2002_rage). The Interdisciplinary Journal of Artificial Intelligence and the Simulation of Behaviour, 2002, 1 (2), pp.197--208. [hal-00731915]
+ * Philippe Mathieu, Jean-Christophe Routier, Yann Secq. [Principles for dynamic multi-agent organizations](./publis/prima02.pdf). Proceedings of 5th Pacific Rim International Workshop on Multi-Agents (PRICAI2002/PRIMA2002), 2002,  France. pp.109--122. [hal-00732049]
+ * Philippe Mathieu, Jean-Christophe Routier, Yann Secq. RAGE : [An agent framework for easy distributed computing](./publis/rage-aisb-2002.pdf). Proceedings of the Artificial Intelligence and the Simulation of Behaviour symposium on Artificial Intelligence and Grid Computing (AISB'2002), 2002,  France. pp.20-24. [hal-00731967]
+ * Philippe Mathieu, Jean-Christophe Routier. [A Multi-Agent Approach to Co-operative Work](./publis/cadui2002.pdf). Proceedings of 4th International Conference on Computer-Aided Design of User Interfaces (CADUI'02), 2002, undef, France. pp.367--380. [hal-00731973]
+ * Philippe Mathieu, Jean-Christophe Routier, Yann Secq. Ubiquitous Computing : vanishing the notion of application. Proceedings of the first International Joint Conference on Autonomous Agents and Multi Agent Systems Workshop on Ubiquitous Agents on embedded, wearable, and mobile devices (UAEWMD@AAMAS2002), 2002, undef, France. [hal-00731956]
+ * Philippe Mathieu, Jean-Christophe Routier, Yann Secq. Dynamic organization of multi-agent systems. Proceedings of the first International Joint Conference on Autonomous Agents and Multi-Agent Systems (AAMAS'2002), 2002, undef, France. pp.451--452. [hal-00731955]
+ * Philippe Mathieu, Jean-Christophe Routier. [Une contribution du multi-agent aux applications de travail coopératif](./publis/diapo-dans-tsi.pdf). Réseaux et systèmes répartis, calculateurs Parallèles, 2001, 13 (2-3), pp.207--226. [hal-00731926]
+ * Jean-Christophe Routier, Philippe Mathieu, Yann Secq. [Dynamic Skill Learning: A Support to Agent Evolution](./publis/aisb01-dynamic-skill-learni.pdf). Proceedings of the Artificial Intelligence and the Simulation of Behaviour symposium on Adaptive Agents and Multi-agent systems (AISB'01), 2001, undef, France. pp.25--32. [hal-00731965]
+
+
