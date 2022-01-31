@@ -9,7 +9,7 @@ Ce tutoriel s'accompagne d'exemples. D'autres exemples se trouvent dans le dossi
 
 La version actuelle de Magique nécessite d'utiliser la version 8 du Java Development Kit.  
 
-Cette version doit être téléchargée [sur le site d'Oracle](https://www.oracle.com/java/technologies/javase/javase8-archive-downloads.html), puis installée. Mémorisez le dossier dans lequel vous ferez cette installation. Nous le noterons par la suite `cheminVersJDK18/`.
+Cette version doit être téléchargée [sur le site d'Oracle](https://www.oracle.com/java/technologies/javase/javase8-archive-downloads.html), puis installée. Mémorisez le dossier dans lequel vous ferez cette installation. Nous le noterons par la suite `cheminVersJDK18/` (ajouter ce chemin à la variable système `PATH` simplifie l'exécution des commandes qui suivent, puisque cela dispense d'ajouter ce chemin en tête des commandes indiquées).
 
 
 ## Exemple simple : Pong
@@ -17,6 +17,7 @@ Cette version doit être téléchargée [sur le site d'Oracle](https://www.oracl
 Nous allons aborder l'exemple  **Ping-Pong**.
 Les codes se trouvent dans le dossier `.../magique/example/pingpong` (et aussi dans le dossier `.../magique/tutorial/exemples/chap2`).
 
+L'exécution des autres exemples reprend les mêmes principes.
 
 ### Exécution distribuée dans des terminaux
 
