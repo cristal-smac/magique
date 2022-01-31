@@ -32,6 +32,7 @@ Il peut être nécessaire de commencer par compiler les codes fournis
 (Sous windows, il faudra replacer le ":" dans l'option classpath par ";", il est aussi possible qu'il faille mettre des guillemets, ce qui donnerait :
 ```windows
 .../magique/example/pingpong> cheminVersJDK18/bin/javac -classpath ".;../../magique18.jar" *.java
+```
 )
 
 
