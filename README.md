@@ -1,9 +1,14 @@
 # Magique
 
+Vous trouverez une [présentation détaillée à cet endroit](https://www.cristal.univ-lille.fr/SMAC/projects/magique/presentation/presentationContent.html).
+
+
 Vous pouvez découvrir le fonctionnement de Magique dans [le tutoriel](./tutorial/tutorial.pdf).
 
 
 Ce tutoriel s'accompagne d'exemples. D'autres exemples se trouvent dans le dossier `example` (les liens vers `www.lifl.fr/magique` sont cassés et les examples `Rage` et `vente` sont difficilement exploitables en l'état).
+
+La présentation ci-dessous donne des éléments pour permettre l'exécution d'un premier exemple jouet.
 
 ## Exécution de Magique
 
