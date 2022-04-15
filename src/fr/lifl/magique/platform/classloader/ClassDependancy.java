@@ -11,10 +11,11 @@
 package fr.lifl.magique.platform.classloader;
 
 import java.io.*;
-import java.net.*;
 import java.util.*;
 
-import at.dms.classfile.*;
+import fr.lifl.magique.Agent;
+import javassist.NotFoundException;
+import javassist.bytecode.BadBytecode;
 
 public class ClassDependancy {
 
@@ -60,7 +61,7 @@ public class ClassDependancy {
       return nextClass;
    }
 
-   public Hashtable getDependantClasses(String rootClass) throws ClassNotFoundException {
+   public Hashtable getDependantClasses(String rootClass) throws ClassNotFoundException, NotFoundException, BadBytecode, IOException {
       Enumeration newClasses;
       String currentClass;
       String otherClass;
@@ -94,7 +95,7 @@ public class ClassDependancy {
 
    // end addition 29/02/2002
 
-   public Vector getFirstLevelDependancy(String className) throws ClassNotFoundException {
+   public Vector getFirstLevelDependancy(String className) throws ClassNotFoundException, NotFoundException, BadBytecode, IOException {
       Vector allClasses = new Vector();
       ClassArchive classArchive;
 
@@ -102,14 +103,8 @@ public class ClassDependancy {
 
       //    classLibrary.addClassArchive(classArchive);
       String currentName = null;
-      ClassInspector cl = null;
-      try {
-         cl = new ClassInspectorImpl(new DataInputStream(new ByteArrayInputStream(classArchive.getBytecode())));
-      } catch (ClassFileFormatException e) {
-         e.printStackTrace();
-      } catch (IOException ee) {
-         ee.printStackTrace();
-      }
+      ClassInspector cl = new ClassInspectorImpl(new DataInputStream(new ByteArrayInputStream(classArchive.getBytecode())));;
+
       String[] allClassesRef = cl.getAllReferencedClasses();
       for (int i = 0; i < allClassesRef.length; i++) {
          currentName = allClassesRef[i].replace('.', '/');

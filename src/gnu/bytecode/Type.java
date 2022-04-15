@@ -1,11 +1,19 @@
-// Copyright (c) 1997  Per M.A. Bothner.
+// Copyright (c) 1997, 2000, 2003, 2004, 2006, 2009  Per M.A. Bothner.
 // This is free software;  for terms and warranty disclaimer see ./COPYING.
 
 package gnu.bytecode;
-import java.io.*;
+import java.util.*;
+import gnu.kawa.util.AbstractWeakHashTable;
 
-public abstract class Type {
+/** An abstract type as used by both gnu.bytecode and gnu.expr. */
+
+public abstract class Type
+/* #ifdef JAVA5 */
+ implements java.lang.reflect.Type
+/* #endif */
+{
   String signature;
+  String genericSignature;
   // Fully-qualified name (in external format, i.e. using '.' to separate).
   String this_name;
   /**
@@ -13,71 +21,263 @@ public abstract class Type {
    */
   int size;
 
-  Type () { }
+  ArrayType array_type;
 
-  // Maps java.lang.Class to corresponding Type.
-  static java.util.Hashtable mapClassToType;
+  protected Type () { }
 
-  /** Register that the Type for class is type. */
-  public static void registerTypeForClass(Class clas, Type type)
+  /** Return Java-level implementation type.
+   * The type used to implement types not natively understood by the JVM
+   * or the Java language.
+   * Usually, the identity function.  However, a language might handle
+   * union types or template types or type expressions calculated at
+   * run time.  In that case return the type used at the Java level,
+   * and known at compile time.
+   */
+  public Type getImplementationType()
   {
-    if (mapClassToType == null)
-      mapClassToType = new java.util.Hashtable(100);
-    mapClassToType.put(clas, type);
-    type.reflectClass = clas;
+    return this;
   }
 
-  public static Type make(Class reflectClass)
+    /** Return JVM-level implementation type. */
+    public Type getRawType() {
+	Type t = getImplementationType();
+	if (t != this)
+	    t = t.getRawType();
+	return t;
+    }
+
+    /** If this is a type alias, get the aliased type.
+     * This is semi-deprecated.
+     */
+    public Type getRealType() {
+	return this;
+    }
+
+    public boolean isInterface() {
+        Type raw = getRawType();
+        return raw != this && raw.isInterface();
+    }
+
+  public boolean isExisting()
+  {
+    // Overridden in ObjectType.
+    return true;
+  }
+
+  static ClassToTypeMap mapClassToType;
+
+  /** Maps Java type name (e.g. "java.lang.String[]") to corresponding Type. */
+  /* #ifdef JAVA5 */
+  static java.util.HashMap<String,Type> mapNameToType;
+  /* #else */
+  // static java.util.Hashtable mapNameToType;
+  /* #endif */
+
+  public static Type lookupType (String name)
+  {
+    /* #ifdef JAVA5 */
+    java.util.HashMap<String,Type> map = mapNameToType;
+    synchronized (map) { return map.get(name); }
+    /* #else */
+    // return (Type) mapNameToType.get(name);
+    /* #endif */
+  }
+
+  /** Find an Type with the given name, or create a new one.
+   * Use this for "library classes", where you need the field/method types,
+   * but not one where you are about to generate code for.
+   * @param name the name of the class (e..g. "java.lang.String").
+   */
+  public static Type getType (String name)
+  {
+    /* #ifdef JAVA5 */
+    java.util.HashMap<String,Type> map = mapNameToType;
+    /* #else */
+    // java.util.Hashtable map = mapNameToType;
+    /* #endif */
+    synchronized (map)
+      {
+        Type type = (Type) map.get(name);
+        if (type == null)
+          {
+            if (name.endsWith("[]"))
+              type = ArrayType.make(name);
+            else
+              {
+                ClassType cl = new ClassType(name);
+                cl.setExisting(true);
+                type = cl;
+              }
+            map.put(name, type);
+          }
+        return type;
+      }
+  }
+
+  /** Register that the Type for class is type. */
+  public synchronized static void registerTypeForClass(Class clas, Type type)
+  {
+    ClassToTypeMap map = mapClassToType;
+    if (map == null)
+      mapClassToType = map = new ClassToTypeMap();
+    type.reflectClass = clas;
+    map.put(clas, type);
+  }
+
+    /** Try to map java.lang.reflect.Type to gnu.bytecode.Type.
+     * If we can't handle that, resolve the Class instead.
+     */
+    public static Type make(Class reflectClass, java.lang.reflect.Type type) {
+	Type t = make(type);
+	return t != null ? t : make(reflectClass);
+    }
+
+    /** Resolve a java.lang.reflect.Type to gnu.bytecode.Type.
+     * Handles simple parameterized types, but does not handle type variables.
+     * @return a translated Type, or null for unhandled types.
+     */
+    static Type make(java.lang.reflect.Type type) {
+	if (type instanceof Class)
+	    return make((Class) type);
+	if (type instanceof java.lang.reflect.GenericArrayType)
+	    return null;
+	if (type instanceof java.lang.reflect.ParameterizedType) {
+	    java.lang.reflect.ParameterizedType ptype
+		= (java.lang.reflect.ParameterizedType) type;
+	    java.lang.reflect.Type typeArguments[]
+		= ptype.getActualTypeArguments();
+	    Type rt = Type.make(ptype.getRawType());
+	    if (rt instanceof ClassType) {
+		ClassType rawType = (ClassType) rt;
+		int nargs = typeArguments.length;
+		Type[] typeArgumentTypes = new Type[nargs];
+		char[] bounds = new char[nargs];
+		for (int i = 0;  i < nargs;  i++) {
+		    java.lang.reflect.Type ti = typeArguments[i];
+		    if (ti instanceof java.lang.reflect.WildcardType) {
+			java.lang.reflect.WildcardType wi =
+			    (java.lang.reflect.WildcardType) ti;
+			java.lang.reflect.Type[] lower = wi.getLowerBounds();
+			java.lang.reflect.Type[] upper = wi.getUpperBounds();
+			if (lower.length + upper.length != 1)
+			    return null;
+			else if (lower.length == 1) {
+			    bounds[i] = '-';
+			    ti = lower[0];
+			}
+			else /* if (upper.length == 1) */ {
+			    bounds[i] = '+';
+			    ti = upper[0];
+			}
+		    }
+		    typeArgumentTypes[i] = Type.make(ti);
+		}
+		ParameterizedType ret = new ParameterizedType(rawType, typeArgumentTypes);
+		ret.setTypeArgumentBounds(bounds);
+		return ret;
+	    }
+	}
+	if (type instanceof java.lang.reflect.TypeVariable) {
+	    return TypeVariable.make((java.lang.reflect.TypeVariable) type);
+	}
+	return null;
+    }
+
+  public synchronized static Type make(Class reflectClass)
   {
     Type type;
+    
     if (mapClassToType != null)
       {
-	Object t = mapClassToType.get(reflectClass);
+	Type t = mapClassToType.get(reflectClass);
 	if (t != null)
-	  return (Type) t;
+	  return t;
       }
     if (reflectClass.isArray())
-      type = new ArrayType(Type.make(reflectClass.getComponentType()));
+      type = ArrayType.make(Type.make(reflectClass.getComponentType()));
     else if (reflectClass.isPrimitive())
       throw new Error("internal error - primitive type not found");
     else
-      type = ClassType.make(reflectClass.getName());
-    type.reflectClass = reflectClass;
+      {
+	String name = reflectClass.getName();
+        /* #ifdef JAVA5 */
+        java.util.HashMap<String,Type> map = mapNameToType;
+        /* #else */
+        // java.util.Hashtable map = mapNameToType;
+        /* #endif */
+        synchronized (map)
+          {
+            type = (Type) map.get(name);
+            if (type == null
+                || (type.reflectClass != reflectClass
+                    && type.reflectClass != null))
+              {
+                ClassType cl = new ClassType(name);
+                cl.setExisting(true);
+                type = cl;
+                mapNameToType.put(name, type);
+              }
+          }
+      }
     registerTypeForClass(reflectClass, type);
     return type;
   }
 
-  public final String getSignature () { return signature; }
-  protected void setSignature(String sig) { this.signature = sig; }
+    public String getSignature() { return signature; }
+    protected void setSignature(String sig) { this.signature = sig; }
+    public String getGenericSignature() { return genericSignature; }
+    protected void setGenericSignature(String sig) { this.genericSignature = sig; }
+    public String getMaybeGenericSignature() {
+	String s = getGenericSignature();
+	return s != null ? s : getSignature();
+    }
 
   Type (String nam, String sig) {
     this_name = nam;
     signature = sig;
   }
 
+  public Type (Type type)
+  {
+    this_name = type.this_name;
+    signature = type.signature;
+    size = type.size;
+    reflectClass = type.reflectClass;
+  }
+
   public Type promote () {
-    return size < 4 ? int_type : this;
+    return size < 4 ? intType : this;
+  }
+
+  public Type promoteIfUnsigned() {
+      if (this instanceof PrimType) {
+          char sig1 = signature.charAt(0);
+          if ((sig1 == 'B' || sig1 == 'S') && ((PrimType) this).isUnsigned())
+              return intType;
+      }
+      return this;
   }
 
   public final int getSize() { return size; }
+  public int getSizeInWords () { return size > 4 ? 2 : 1; }
 
   public final boolean isVoid () { return size == 0; }
 
   /** Returns the primitive type corresponding to a signature character.
    * @return a primitive type, or null if there is no such type. */
-  public static Type signatureToPrimitive(char sig)
+  public static PrimType signatureToPrimitive(char sig)
   {
     switch(sig)
       {
-      case 'B':  return Type.byte_type;
-      case 'C':  return Type.char_type;
-      case 'D':  return Type.double_type;
-      case 'F':  return Type.float_type;
-      case 'S':  return Type.short_type;
-      case 'I':  return Type.int_type;
-      case 'J':  return Type.long_type;
-      case 'Z':  return Type.boolean_type;
-      case 'V':  return Type.void_type;
+      case 'B':  return Type.byteType;
+      case 'C':  return Type.charType;
+      case 'D':  return Type.doubleType;
+      case 'F':  return Type.floatType;
+      case 'S':  return Type.shortType;
+      case 'I':  return Type.intType;
+      case 'J':  return Type.longType;
+      case 'Z':  return Type.booleanType;
+      case 'V':  return Type.voidType;
       }
     return null;
   }
@@ -98,7 +298,7 @@ public abstract class Type {
     if (c == '[')
       {
 	type = signatureToType(sig, off+1, len-1);
-	return type == null ? null : new ArrayType(type);
+	return type == null ? null : ArrayType.make(type);
       }
     if (c == 'L' && len > 2 && sig.indexOf(';', off) == len-1+off)
       return ClassType.make(sig.substring(off+1,len-1+off).replace('/', '.'));
@@ -109,6 +309,30 @@ public abstract class Type {
   public static Type signatureToType(String sig)
   {
     return signatureToType(sig, 0, sig.length());
+  }
+
+  public static void printSignature (String sig, int off, int len,
+                                     java.io.PrintWriter out)
+  {
+    if (len == 0)
+      return;
+    char c = sig.charAt(off);
+    Type type;
+    if (len == 1)
+      {
+	type = signatureToPrimitive(c);
+	if (type != null)
+	  out.print(type.getName());
+      }
+    else if (c == '[')
+      {
+        printSignature(sig, off+1, len-1, out);
+        out.print("[]");
+      }
+    else if (c == 'L' && len > 2 && sig.indexOf(';', off) == len-1+off)
+      out.print(sig.substring(off+1,len-1+off).replace('/', '.'));
+    else
+      out.append(sig, off, len-off);
   }
 
   /** Return the length of the signature starting at a given string position.
@@ -176,9 +400,14 @@ public abstract class Type {
     return null;
   }
 
-  public final String getName ()
+  public String getName ()
   {
     return this_name;
+  }
+
+  protected void setName (String name)
+  {
+    this_name = name;
   }
 
   public static boolean isValidJavaTypeName (String name)
@@ -214,29 +443,109 @@ public abstract class Type {
   }
 
   /** Return true if this is a "subtype" of other. */
-  public boolean isSubtype (Type other)
+  public final boolean isSubtype (Type other)
   {
-    Class thisClass = getReflectClass();
-    Class otherClass = other.getReflectClass();
-    if (thisClass != null && otherClass != null)
-      return otherClass.isAssignableFrom(thisClass);
-    if (other == Type.pointer_type && this instanceof ObjectType)
-      return true;
+    int comp = compare(other);
+    return comp == -1 || comp == 0;
+  }
 
-    if (this instanceof ClassType && other instanceof ClassType)
+    /** If this is the target type, is a given source type compatible?
+     * Return -1 if no; 1 if yes; 0 if need to check at run-time.
+     * @return -1 if not compatible; 0 if need to check at run-time;
+     *   1 if compatible; 2 if compatible and no conversion or cast needed.
+     */
+    public int isCompatibleWithValue(Type valueType) {
+        if (this == toStringType)
+            return valueType == javalangStringType ? 2 : 1;
+        // Hack for LangPrimType.charType.
+        if (this == charType && valueType.getImplementationType()== this)
+            return 2;
+        return isCompatibleWithValue(this, valueType);
+    }
+
+    public static int isCompatibleWithValue(Type targetType, Type valueType) {
+        if (targetType == valueType)
+            return 2;
+        int comp = targetType.compare(valueType);
+        return comp >= 0 ? 1 : comp == -3 ? -1 : 0;
+    }
+
+  /**
+   * Computes the common supertype
+   *
+   * Interfaces are not taken into account.
+   * This would be difficult, since interfaces allow multiple-inheritance.
+   * This means that there may exists multiple common supertypes
+   * to t1 and t2 that are not comparable.
+   *
+   * @return the lowest type that is both above t1 and t2,
+   *  or null if t1 and t2 have no common supertype.
+   */
+  public static Type lowestCommonSuperType(Type t1, Type t2)
+  {
+    if (t1 == neverReturnsType)
+      return t2;
+    if (t2 == neverReturnsType)
+      return t1;
+    if (t1 == null || t2 == null)
+      return null;
+    if (t1 == t2)
+      return t1;
+    if (t1 instanceof PrimType && t2 instanceof PrimType)
       {
-	// If stackType inherits from target type, no coercion is needed.
-	ClassType baseClass = (ClassType) this;
-	while (baseClass != null)
-	  {
-	    if (baseClass == other)
-	      return true;
-	    baseClass = baseClass.getSuperclass();
-	  }
+        t1 = ((PrimType) t1).promotedType();
+        t2 = ((PrimType) t2).promotedType();
+        return t1 == t2 ? t1 : null;
       }
-    // FIXME - also need to check for implemented interfaces!
+    if (t1.isSubtype(t2))
+      return t2;
+    else if (t2.isSubtype(t1))
+      return t1;
+    else
+      {
+       // the only chance left is that t1 and t2 are ClassTypes.
+       if (!(t1 instanceof ClassType && t2 instanceof ClassType))
+         return Type.objectType;
+       ClassType c1 = (ClassType) t1;
+       ClassType c2 = (ClassType) t2;
+       if (! c1.isInterface() && ! c2.isInterface())
+         {
+           ClassType s1 = c1.getSuperclass();
+           ClassType s2 = c2.getSuperclass();
+           if (s1 != null && s2 != null)
+             return lowestCommonSuperType(s1, s2);
+         }
+      }
+    return Type.objectType;
+  }
 
-    return false;
+  /** Return a numeric code showing "subtype" relationship:
+   *  1: if other is a pure subtype of this;
+   *  0: if has the same values;
+   * -1: if this is a pure subtype of other;
+   * -2: if they have values in common but neither is a subtype of the other;
+   * -3: if the types have no values in common.
+   * "Same values" is rather loose;  by "A is a subtype of B"
+   * we mean that all instance of A can be "widened" to B.
+   * More formally, A.compare(B) returns:
+   *  1: all B values can be converted to A without a coercion failure
+   *     (i.e. a ClassCastException or overflow or major loss of information),
+   *     but not vice versa.
+   *  0: all A values can be converted to B without a coercion failure
+   *     and vice versa;
+   * -1: all A values can be converted to B without a coercion failure
+   *     but not vice versa;
+   * -2: there are (potentially) some A values that can be converted to B,
+   *     and some B values can be converted to A;
+   * -3: there are no A values that can be converted to B, and neither
+   *     are there any B values that can be converted to A.
+   */
+  public abstract int compare(Type other);
+
+  /** Change result from compare to compensate for argument swapping. */
+  protected static int swappedCompareResult(int code)
+  {
+    return code == 1 ? -1 : code == -1 ? 1 : code;
   }
 
   /** Return true iff t1[i].isSubtype(t2[i]) for all i. */
@@ -252,21 +561,46 @@ public abstract class Type {
     return true;
   }
 
+    public static boolean isSame(Type t1, Type t2) {
+        return t1 == t2
+            || (t1 != null && t2 != null && t1.equals(t2));
+    }
+
   public void emitIsInstance (CodeAttr code)
   {
     code.emitInstanceof(this);
   }
 
-  /** Convert an object to a value of this Type.
-   * Throw a ClassCastException when this is not possible. */
-  public abstract Object coerceFromObject (Object obj);
+    /** Convert an object to a value of this Type.
+     * The result is actually of the implementation type, boxed as appropriate,
+     * so it is suitable for standard reflective operations,
+     * like the arguments to Field#set or Method#invoke.
+     * Throw a ClassCastException when this is not possible.
+     */
+    public abstract Object coerceFromObject (Object obj);
 
-  public Object coerceToObject (Object obj)
+    /** Given a raw JVM value convert it to an object of this type.
+     * I.e. the argument is an object of the type returned by
+     * {@code getRawType()}, boxed as needed.  The result may be
+     * a language-specific (boxed) value. Generally a no-op.
+     */
+    public Object coerceToObject(Object obj) {
+        return obj;
+    }
+
+  /** Convert from stackType (usually PrimType) to this type.
+   * However, we might only convert part-way, to some object type.
+   * If converting to this type might fail at run-time, only convert
+   * to Object (as by emitCoerceToObject); a caller can use
+   * {@code stackType.emitConvertFromObject} to convert the rest,
+   * but that might throw an exception. (This is a bit of a kludge.)
+   */
+  public void emitConvertFromPrimitive (Type stackType, CodeAttr code)
   {
-    return obj;
+    stackType.emitCoerceToObject(code);
   }
 
-  /** Compile code to convert an object (on the stack) to this Type. */
+  /** Compile code to convert a object of this type on the stack to Object. */
   public void emitCoerceToObject (CodeAttr code)
   {
   }
@@ -277,53 +611,123 @@ public abstract class Type {
     throw new Error ("unimplemented emitCoerceFromObject for "+this);
   }
 
-  static public Type byte_type = new PrimType ("byte", "B", 1,
-					       java.lang.Byte.TYPE);
-  static public Type short_type = new PrimType ("short", "S", 2,
-						java.lang.Short.TYPE);
-  static public Type int_type = new PrimType ("int", "I", 4,
-					      java.lang.Integer.TYPE);
-  static public Type long_type = new PrimType ("long", "J", 8,
-					       java.lang.Long.TYPE);
+  public static final PrimType byteType
+    = new PrimType ("byte", "B", 1, java.lang.Byte.TYPE);
+  public static final PrimType shortType
+    = new PrimType ("short", "S", 2, java.lang.Short.TYPE);
+  public static final PrimType intType
+    = new PrimType ("int", "I", 4, java.lang.Integer.TYPE);
+  public static final PrimType longType
+    = new PrimType ("long", "J", 8, java.lang.Long.TYPE);
+  public static final PrimType floatType
+    = new PrimType ("float", "F", 4, java.lang.Float.TYPE);
+  public static final PrimType doubleType
+    = new PrimType ("double", "D", 8, java.lang.Double.TYPE);
+  public static final PrimType booleanType
+    = new PrimType ("boolean", "Z", 1, java.lang.Boolean.TYPE);
+  public static final PrimType charType
+    = new PrimType ("char", "C", 2, java.lang.Character.TYPE);
+  public static final PrimType voidType
+    = new PrimType ("void", "V", 0, java.lang.Void.TYPE);
 
-  static public Type float_type = new PrimType ("float", "F", 4,
-						java.lang.Float.TYPE);
-  static public Type double_type = new PrimType ("double", "D", 8,
-						 java.lang.Double.TYPE);
+  /* @deprecated */  public static final PrimType byte_type = byteType;
+  /* @deprecated */  public static final PrimType short_type = shortType;
+  /* @deprecated */  public static final PrimType int_type = intType;
+  /* @deprecated */  public static final PrimType long_type = longType;
+  /* @deprecated */  public static final PrimType float_type = floatType;
+  /* @deprecated */  public static final PrimType double_type = doubleType;
+  /* @deprecated */  public static final PrimType boolean_type = booleanType;
+  /* @deprecated */  public static final PrimType char_type = charType;
+  /* @deprecated */  public static final PrimType void_type = voidType;
 
-  static public Type boolean_type = new PrimType ("boolean", "Z", 1,
-						  java.lang.Boolean.TYPE);
-  static public Type char_type = new PrimType ("char", "C", 2,
-					       java.lang.Character.TYPE);
+  static
+  {
+    /* #ifdef JAVA5 */
+    mapNameToType = new java.util.HashMap<String,Type>();
+    /* #else */
+    // mapNameToType = new java.util.Hashtable();
+    /* #endif */
+	mapNameToType.put("byte",    byteType);
+	mapNameToType.put("short",   shortType);
+	mapNameToType.put("int",     intType);
+	mapNameToType.put("long",    longType);
+	mapNameToType.put("float",   floatType);
+	mapNameToType.put("double",  doubleType);
+	mapNameToType.put("boolean", booleanType);
+	mapNameToType.put("char",    charType);
+	mapNameToType.put("void",    voidType);
+  }
 
-  static public Type void_type = new PrimType ("void", "V", 0,
-					       java.lang.Void.TYPE);
+    /** The return type of an expression that never returns, such as a throw. */
+    public static final Type neverReturnsType
+        = ClassType.make("gnu.bytecode.Type$NeverReturns");
 
-  static public ClassType pointer_type = ClassType.make("java.lang.Object");
-  static public ClassType string_type = ClassType.make("java.lang.String");
-  static public ClassType boolean_ctype = ClassType.make("java.lang.Boolean");
-  static public ClassType throwable_type = ClassType.make("java.lang.Throwable");
-  static public Type[] typeArray0 = new Type[0];
-  static public Method toString_method
-  = pointer_type.addMethod ("toString", typeArray0,
-			     string_type, Access.PUBLIC);
-  static public ClassType number_type = ClassType.make("java.lang.Number");
-  static public Method intValue_method
-  = number_type.addMethod ("intValue", typeArray0,
-			    int_type, Access.PUBLIC);
-  static public Method longValue_method
-  = number_type.addMethod ("longValue", typeArray0,
-			    long_type, Access.PUBLIC);
-  static public Method floatValue_method
-  = number_type.addMethod ("floatValue", typeArray0,
-			    float_type, Access.PUBLIC);
-  static public Method doubleValue_method
-  = number_type.addMethod ("doubleValue", typeArray0,
-			    double_type, Access.PUBLIC);
-  static public Method booleanValue_method
-  = boolean_ctype.addMethod ("booleanValue", typeArray0,
-			      boolean_type, Access.PUBLIC);
+  public static final ClassType javalangObjectType
+    = ClassType.make("java.lang.Object");
+  public static final ClassType objectType = javalangObjectType;
+  public static final ClassType javalangBooleanType
+    = ClassType.make("java.lang.Boolean");
+  public static final ClassType javalangCharacterType
+    = ClassType.make("java.lang.Character");
+  public static final ClassType javalangThrowableType
+    = ClassType.make("java.lang.Throwable");
+  public static final ClassType javalangannotationAnnotationType
+    = ClassType.make("java.lang.annotation.Annotation");
+  public static final Type[] typeArray0 = new Type[0];
+  public static final Method toString_method
+    = objectType.getDeclaredMethod("toString", 0);
+  public static final ClassType javalangNumberType
+    = ClassType.make("java.lang.Number");
+  public static final Method clone_method
+    = Method.makeCloneMethod(objectType);
+  public static final Method intValue_method
+    = javalangNumberType.addMethod("intValue", typeArray0,
+			    intType, Access.PUBLIC);
+  public static final Method longValue_method
+    = javalangNumberType.addMethod("longValue", typeArray0,
+			    longType, Access.PUBLIC);
+  public static final Method floatValue_method
+    = javalangNumberType.addMethod("floatValue", typeArray0,
+			    floatType, Access.PUBLIC);
+  public static final Method doubleValue_method
+    = javalangNumberType.addMethod("doubleValue", typeArray0,
+			    doubleType, Access.PUBLIC);
+  public static final Method booleanValue_method
+    = javalangBooleanType.addMethod("booleanValue", typeArray0,
+			      booleanType, Access.PUBLIC);
+  public static final ClassType javalangClassType
+    = ClassType.make("java.lang.Class");
 
+    public static final ClassType javalanginvokeMethodHandleType
+        = ClassType.make("java.lang.invoke.MethodHandle");
+
+    /** The magic type of null. */
+    public static final ObjectType nullType
+    //= new ObjectType("(type of null)");
+    = new SpecialObjectType("(type of null)", objectType);
+    public static final ObjectType errorType
+        = new SpecialObjectType("<error-type>", javalangObjectType);
+
+    static public ClassType javalangStringType = ClassType.make("java.lang.String");
+    /* The String type. but coercion is handled by toString. */
+    public static final ObjectType toStringType
+        = new SpecialObjectType("String", javalangStringType);
+
+  /** @deprecated */
+  public static final ClassType pointer_type = javalangObjectType;
+  /** @deprecated */
+  public static final ClassType string_type = javalangStringType;
+  /** @deprecated */
+  public static final ObjectType tostring_type = toStringType;
+  /** @deprecated */
+  public static final ClassType java_lang_Class_type = javalangClassType;
+  /** @deprecated */
+  public static final ClassType boolean_ctype = javalangBooleanType;
+  /** @deprecated */
+  public static final ClassType throwable_type = javalangThrowableType;
+  /** @deprecated */
+  public static final ClassType number_type = javalangNumberType;
+  
   protected Class reflectClass;
 
   /** Get the java.lang.Class object for the representation type. */
@@ -332,8 +736,38 @@ public abstract class Type {
     return reflectClass;
   }
 
+  public void setReflectClass(java.lang.Class rclass)
+  {
+    reflectClass = rclass;
+  }
+
   public String toString()
   {
     return "Type " + getName();
+  }
+
+  public int hashCode()
+  {
+    String name = toString();
+    return name == null ? 0 : name.hashCode ();
+  }
+
+    /** A marker class, used for {@code Type.neverReturnsType}. */
+    public static class NeverReturns {
+        private NeverReturns() { }
+    }
+
+  static class ClassToTypeMap extends AbstractWeakHashTable<Class,Type>
+  {
+    protected Class getKeyFromValue (Type type)
+    {
+      return type.reflectClass;
+    }
+
+    protected boolean matches (Class oldValue, Class newValue)
+    {
+      // Minor optimization.
+      return oldValue == newValue;
+    }
   }
 }

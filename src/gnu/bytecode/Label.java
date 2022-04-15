@@ -1,141 +1,222 @@
-// Copyright (c) 1997  Per M.A. Bothner.
+// Copyright (c) 1997, 2004, 2008, 2010  Per M.A. Bothner.
 // This is free software;  for terms and warranty disclaimer see ./COPYING.
 
 package gnu.bytecode;
-import java.io.*;
+import java.util.ArrayList;
 
 /**
  * A Label represents a location in a Code attribute.
  */
 
-/*
- * Java VM control transfer instructions contain PC-relative offsets
- * to the target (location/Label).  (The offsets are relative to the
- * start of the instruction.)  A complication is that some instructions
- * use 2-byte relative offsets, while others use 4-byte relative offsets.
- * A few instructions exist in both "narrow" 2-byte and "wide" 4-byte forms.
- *
- * This library uses a very simple data structure to accumulate
- * generated instructions - just a simple byte array of opcodes and
- * operands, just as in the final .class file.  When emitting a forward
- * branch, we cannot emit the relative addresss of the still-unknown
- * target.  Instead, we emit the negative of the PC of the instruction,
- * and later add the address of the target by back-patching.
- * We keep track of which locations need back-patching in the fixups and
- * wide_fixups arrays (for 2-byte and 4-byte offsets, respectively).
- * This is simple, fast, and concise.  However, if it turns out that
- * the target is more than 32767 bytes away, we have problem:  Once an
- * instruction has been emitted, we cannot change its size (e.g. change
- * a 2-byte jump offset into a 4-byte offset).  (I.e. there is no
- * "relaxation" as is done by many assemblers.)
- *
- * Since very few methods actually need 4-byte jump offsets, the code
- * generator optimistically assumes that when it emits a forward branch
- * the not-yet-defined label will later be defined within the 2-byte span
- * of the current instruction.  (Except of course for instructions like
- * tableswitch and lookupswitch that only exist in 4-byte-offset form.)
- *
- * But what do we do if it turns out that the branch target is > 32767
- * bytes away?  In that case, we emit what I call a "spring" *before*
- * we get out of range.  A "spring" is a trivial basic block that
- * contains only a single wide goto.  The branches that are close to
- * the limit are patched to point to the "spring" instead.  Before
- * every instruction CodeAttr.reserve is called.  It checks if there
- * are any pending banches that are getting close to the limit for
- * 2-byte offsets, in which case it calls Label.emit_spring to
- * generate the spring.
- *
- * Note that we may also need a spring even if the target is known,
- * if we need a 2-byte offset, and the target is too far away.
- *
- * Note that while the Java bytecodes supports 32-bit relative address,
- * there are limitations in the .class file format that limit each
- * method to 2*16 bytes.  This may change.  In any case, this code has
- * been written to support "wide jumps" - but that has not been tested!
- */
-
 public class Label {
-  Label next;
 
-  // The PC of where the label is, or -1 if not yet defined.
+  /** Offset of definition in the fixup_offsets and fixup_labels arrays.
+   * The offset corresponds to the fixup itself. */
+  int first_fixup;
+
+  /** The PC of where the label is, or -1 if not yet defined.
+   * The value -2 means don't generate a StackMapTable entry.
+   * This PC may be tentative if we later run processFixups.
+   * The offset in the code array is cattr.fixupOffset(first_fixup). */
   int position;
 
-  // If >= 0, this is the location of a "spring" to this Label.
-  int spring_position;
+  boolean needsStackMapEntry;
 
-  // Array of PC locations that reference this Label.
-  // Elements that are -1 provide room to grow.
-  // For an element fi in fixups (where fi >= 0), the 2-byte
-  // sequence code[fi]:code[fi+1] will need to be adjusted (relocated) by
-  // the position of this Label, or alternatively spring_postion.
-  // After relocation, code[fi]:code[fi+1] will be a reference to 
-  // this label (usually a PC-relative reference).
-  // The lowest element fi (>= 0) is first, but fixups is otherwise unsorted.
-  // Normally, if defined(), then fixups is null.
-  // However, we may still need fixups even if defined(), if
-  // position is further away than allowed by a 16-bit offset.
-  int[] fixups;
-
-  // Similar to fixups, but each element is a 4-byte relative jump offset.
-  int[] wide_fixups;
+  // FIXME Probably more efficient to have a single array:
+  // local-types followed by stack-types.  We'd need an extra short field.
+  Type[] stackTypes;
+  Type[] localTypes;
 
   public final boolean defined () { return position >= 0; }
 
-  public Label (Method method)
+  public Label ()
   {
-    this(method.code);
+    this(-1);
   }
 
   public Label (CodeAttr code)
   {
-    position = -1;
-    if (code.labels != null)
+    this(-1);
+  }
+
+  public Label (int position)
+  {
+    this.position = position;
+  }
+
+    public boolean isUsed() { return stackTypes != null; }
+
+  Type mergeTypes (Type t1, Type t2)
+  {
+    if ((t1 instanceof PrimType) != (t2 instanceof PrimType))
+      return null;
+    return Type.lowestCommonSuperType(t1, t2);
+  }
+
+  void setTypes (Type[] locals, int usedLocals,
+                 Type[] stack, int usedStack)
+  {
+    for (; usedLocals > 0; usedLocals--)
       {
-	next = code.labels.next;
-	code.labels.next = this;
+        Type last = locals[usedLocals-1];
+        if (last != null)
+          break;
+      }
+    if (stackTypes == null)
+      {
+        if (usedStack == 0)
+          stackTypes = Type.typeArray0;
+        else
+          {
+            stackTypes = new Type[usedStack];
+            System.arraycopy(stack, 0, stackTypes, 0, usedStack);
+          }
+        if (usedLocals == 0)
+            localTypes = Type.typeArray0;
+        else
+          {
+            localTypes = new Type[usedLocals];
+            System.arraycopy(locals, 0, localTypes, 0, usedLocals);
+          }
       }
     else
-      code.labels = this;
-  }
-
-  /* Make all narrow fixups for this label point (relatively) to target. */
-  final private void relocate_fixups (CodeAttr code, int target)
-  {
-    if (fixups == null)
-      return;
-    for (int i = fixups.length; --i >= 0; )
       {
-	int pos = fixups[i];
-	/* Adjust the 2-byte offset at pos in method by target. */
-	if (pos >= 0)
-	  {
-	    byte[] insns = code.getCode();
-	    int code_val = (insns[pos] << 8) | (insns[pos+1] & 0xFF);
-	    code_val += target;
-	    if (code_val < -32768 || code_val >= 32768)
-	      throw new Error ("overflow in label fixup");
-	    insns[pos] = (byte) (code_val >> 8);
-	    insns[pos+1] = (byte) (code_val);
-	  }
+        int SP = usedStack;
+        int slen = stackTypes.length;
+        if (SP != slen)
+          throw new InternalError("inconsistent stack length");
+        for (int i = 0; i < SP; i++)
+          {
+            Type t = mergeTypes(stackTypes[i], stack[i]);
+            if (t == null)
+              throw new InternalError("inconsistent stackType");
+            stackTypes[i] = t;
+          }
+        for (int i = 0; i < localTypes.length;  i++)
+          {
+            mergeLocalType(i, i < usedLocals ? locals[i] : null);
+          }
       }
-    if (this != code.labels)
-      code.reorder_fixups ();
-    fixups = null;
   }
 
-  /* Adjust the 4-byte offset at pos in method by target. */
-  static final void relocate_wide (CodeAttr code, int pos, int target) {
-    if (pos >= 0) {
-      byte[] insns = code.getCode();
-      int code_val
-	= ((insns[pos] & 0xFF) << 24) | ((insns[pos+1] & 0xFF) << 16)
-	| ((insns[pos+2] & 0xFF) << 8) | (insns[pos+3] & 0xFF);
-      code_val += target;
-      insns[pos] = (byte) (code_val >> 24);
-      insns[pos+1] = (byte) (code_val >> 16);
-      insns[pos+2] = (byte) (code_val >> 8);
-      insns[pos+3] = (byte) code_val;
-    }
+  public void setTypes (CodeAttr code)
+  {
+    addTypeChangeListeners(code);
+    if (stackTypes != null && code.SP != stackTypes.length)
+      throw new InternalError();
+    setTypes(code.local_types,
+             code.local_types == null ? 0 : code.local_types.length,
+             code.stack_types,
+             code.SP);
+  }
+
+  public void setTypes (Label other)
+  {
+    setTypes(other.localTypes, other.localTypes.length,
+             other.stackTypes, other.stackTypes.length);
+  }
+
+  private void mergeLocalType (int varnum, Type newType)
+  {
+    if (varnum < localTypes.length)
+      {
+        Type oldLocal = localTypes[varnum];
+        Type newLocal = mergeTypes(oldLocal, newType);
+        if (newLocal != oldLocal)
+          {
+            localTypes[varnum] = newLocal;
+            notifyTypeChangeListeners(varnum, newLocal);
+          }
+      }
+  }
+
+  private void notifyTypeChangeListeners (int varnum, Type newType)
+  {
+    Object[] arr = typeChangeListeners;
+    if (arr == null || arr.length <= varnum)
+      return;
+    Object listeners = arr[varnum];
+    if (listeners == null)
+      return;
+    if (listeners instanceof Label)
+      ((Label) listeners).mergeLocalType(varnum, newType);
+    else
+      {
+        for (Label listener : (ArrayList<Label>) listeners)
+          listener.mergeLocalType(varnum, newType);
+      }
+    if (newType == null)
+      arr[varnum] = null;
+  }
+
+  /** Map from Variable number to set of listeners.
+   * When {@code this.localTypes[varnum]} is invalidated, then we also
+   * need to invalidate that variable in all the listeners.
+   * The type is actually a {@code Union<Label,ArrayList<Label>>[]}.
+   */
+  private Object[] typeChangeListeners;
+
+  void addTypeChangeListener (int varnum, Label listener)
+  {
+    Object[] arr = typeChangeListeners;
+    if (arr == null)
+      typeChangeListeners = arr = new Object[varnum + 10];
+    else if (arr.length <= varnum)
+      {
+        arr = new Object[varnum + 10];
+        System.arraycopy(typeChangeListeners, 0, arr, 0, typeChangeListeners.length);
+        typeChangeListeners = arr;
+      }
+    Object set = arr[varnum];
+    if (set == null)
+      arr[varnum] = listener;
+    else
+      {
+        ArrayList<Label> list;
+        if (set instanceof Label)
+          {
+            list = new ArrayList<Label>();
+            list.add((Label) set);
+            arr[varnum] = list;
+          }
+        else
+          list = (ArrayList<Label>) set;
+        list.add(listener);
+      }
+  }
+
+  void addTypeChangeListeners (CodeAttr code)
+  {
+    if (code.local_types != null && code.previousLabel != null)
+      {
+        int len = code.local_types.length;
+        for (int varnum = 0;  varnum < len;  varnum++)
+          {
+            if (code.local_types[varnum] != null
+                && (code.varsSetInCurrentBlock == null
+                    || code.varsSetInCurrentBlock.length <= varnum
+                    || ! code.varsSetInCurrentBlock[varnum]))
+              code.previousLabel.addTypeChangeListener(varnum, this);
+          }
+      }
+  }
+
+  /**
+   * Define the value of a label as having the current location.
+   * @param code the "Code" attribute of the current method
+   */
+  public void defineRaw (CodeAttr code) {
+      defineRaw(code, CodeAttr.FIXUP_DEFINE);
+  }
+
+  void defineRaw (CodeAttr code, int fixupKind)
+  {
+    if (position >= 0)
+      throw new Error ("label definition more than once");
+    position = code.PC;
+    first_fixup = code.fixup_count;
+    if (first_fixup >= 0)
+      code.fixupAdd(fixupKind, this);
   }
 
   /**
@@ -144,174 +225,35 @@ public class Label {
    */
   public void define (CodeAttr code)
   {
-    code.unreachable_here = false;
-    if (position >= 0)
-      throw new Error ("label definition more than once");
-
-    position = code.PC;
-
-    /* Remove redundant goto in:  goto L; L:
-       These tend to be generated when compiling IfExp's,
-       so it is worth checking for them.
-    */
-    int goto_pos = position - 3;  // Position of hypothetical goto.
-    if (code.readPC <= goto_pos
-        && fixups != null && wide_fixups == null
-	&& goto_pos > 0 && code.getCode()[goto_pos] == (167-256) /* goto */)
+    boolean wasReachable=code.reachableHere();
+    if (wasReachable)
       {
-	int i;
-	goto_pos++;  // Skip goto opcode.
-	for (i = fixups.length;  -- i >= 0; )
-	  {
-	    if (fixups[i] == goto_pos)
-	      break;
-	  }
-	if (i >= 0)
-	  {
-	    position -= 3;
-	    code.PC = position;
-	    fixups[i] = -1;
-	  }
+        setTypes(code);
       }
-
-    code.readPC = position;
-    relocate_fixups (code, position);
-
-    if (wide_fixups != null) {
-      for (int i = wide_fixups.length; --i >= 0; )
-	relocate_wide (code, wide_fixups[i], position);
-      wide_fixups = null;
+    else if (localTypes != null)
+      {
+        for (int i = localTypes.length; --i >= 0; )
+          {
+            if (localTypes[i] != null
+                && (code.locals.used == null || code.locals.used[i] == null))
+              {
+                localTypes[i] = null;
+              }
+          }
+      }
+    code.setPreviousLabelHere(this);
+    defineRaw(code, (wasReachable ? CodeAttr.FIXUP_DEFINE
+                     : CodeAttr.FIXUP_DEFINE_UNREACHABLE));
+    if (localTypes != null) {
+      // Copy merged type back to current state.
+      code.setTypes(this);
     }
+    code.setReachable(true);
   }
 
-  /**
-   * Emit goto_w as target for far-away gotos in large methods.
-   * Needs to be invoked if the earliest still-pending fixup
-   * is at the limit of a 2-byte relative jump.
-   * To solve the problem, we emit a goto_w for the label,
-   * and change all pending (short) fixups to point here.
-   * We also have to jump past this goto.
-   */
-   
-  void emit_spring (CodeAttr code)
-  {
-    code.reserve(8);
-    if (!code.unreachable_here)
-      {
-	code.put1 (167);  // goto PC+6
-	code.put2 (6);
-      }
-    spring_position = code.PC;
-    relocate_fixups (code, spring_position);
-    code.put1 (200);  // goto_w
-    emit_wide(code, spring_position);
-    code.readPC = code.PC;
-  }
-
-  /* Save a fixup so we can later backpatch code[PC..PC+1]. */
-  private void add_fixup (CodeAttr code)
-  {
-    int PC = code.PC;
-    int i;
-    if (fixups == null)
-      {
-	fixups = new int[2];
-	fixups[0] = PC;
-	fixups[1] = -1;
-      }
-    else
-      {
-	int fixups_length = fixups.length;
-	for (i = 0; i < fixups_length && fixups[i] >= 0; ) i++;
-	if (i == fixups_length)
-	  {
-	    int[] new_fixups = new int[2 * fixups.length];
-	    System.arraycopy (fixups, 0, new_fixups, 0, fixups.length);
-	    i = new_fixups.length;
-	    do { new_fixups[--i] = -1; } while (i > fixups_length);
-	    fixups = new_fixups;
-	  }
-	if (PC < fixups[0])
-	  {
-	    fixups[i] = fixups[0];
-	    fixups[0] = PC;
-	  }
-	else
-	  fixups[i] = PC;
-      }
-    if (this != code.labels
-	&& (code.labels.fixups == null
-	    || PC < code.labels.fixups[0]))
-      code.reorder_fixups ();
-  }
-  
-  private void add_wide_fixup (int PC)
-  {
-    int i;
-    if (wide_fixups == null) {
-      wide_fixups = new int[2];
-      wide_fixups[0] = PC;
-      wide_fixups[1] = -1;
-      return;
-    }
-    for (i = 0; i < wide_fixups.length; i++ ) {
-      if (wide_fixups[i] < 0) {
-	wide_fixups[i] = PC;
-	return;
-      }
-    }
-    int[] new_fixups = new int[2 * wide_fixups.length];
-    System.arraycopy (wide_fixups, 0, new_fixups, 0, wide_fixups.length);
-    new_fixups[wide_fixups.length] = PC;
-    for (i = wide_fixups.length; ++i < new_fixups.length; )
-      new_fixups[i] = -1;
-    wide_fixups = new_fixups;
-  }
-
-  /** Return true if there are references to this Label.
-      We assume !defined(). */
-  public boolean hasFixups()
-  {
-    return fixups != null || wide_fixups != null;
-  }
-
-  /**
-   * Emit a reference to the current label.
-   * @param method the current method
-   * Emit the reference as a 2-byte difference relative to PC-1.
-   */
-   
-  public void emit (CodeAttr code) {
-    int PC_rel = 1 - code.PC;
-    int delta = PC_rel;
-    if (defined ()) {
-      delta += position;
-      if (delta < -32768) {
-	if (spring_position >= 0 && spring_position + PC_rel >= -32768)
-	  delta = spring_position + PC_rel;
-	else {
-	  add_fixup (code);
-	  delta = PC_rel;
-	}
-      }
-    } else
-      add_fixup (code);
-    code.put2 (delta);
-  }
-
-  /**
-   * Emit a wide reference to the current label.
-   * @param code the current method
-   * @param start_pc the PC at the start of this instruction
-   * Emit the reference as a 4-byte difference relative to PC-offset.
-   */
-  public void emit_wide (CodeAttr code, int start_pc)
-  {
-    int delta = -start_pc;
-    if (defined ())
-      delta += position;
-    else
-      add_wide_fixup (code.PC);
-    code.put4 (delta);
-  }
+  /* DEBUG
+  int id = ++counter;
+  static int counter;
+  public String toString() { return "Label#"+id+"-pos:"+position; }
+  */
 }

@@ -2,7 +2,6 @@
 // This is free software;  for terms and warranty disclaimer see ./COPYING.
 
 package gnu.bytecode;
-import java.io.*;
 
 /** The state of a try statement. */
 
@@ -10,7 +9,9 @@ public class TryState {
   /** The surrounding TryState, if any. */
   TryState previous;
 
-  /** The label for the code following the entire try-statement. */
+  /** The label for the code following the entire try-statement.
+   * Allocated lazily: If null, the following code is unreachable.
+   */
   Label end_label;
 
   /** If this "try" has a "finally", the Label of the "finally" sub-routine. */
@@ -22,20 +23,43 @@ public class TryState {
   /** Non-null if we need a temporary to save the result. */
   Variable saved_result;
 
-  /** If the SP > 0 when we entered the try, the stack is saved here. */
+  /** If the {@code SP > 0} when we entered the try, the stack is saved here. */
   Variable[] savedStack;
 
-  int start_pc;
-  int end_pc;
+  Label start_try;
+  Label end_try;
 
   /** If we are inside a try, the type of variable matched. */
   ClassType try_type;
+
+  /** Only used in emitWithCleanupStart mode. */
+  Type[] savedTypes;
+
+  ExitableBlock exitCases;
+
+  Variable exception;
+
+  boolean tryClauseDone;
 
   public TryState (CodeAttr code)
   {
     previous = code.try_stack;
     code.try_stack = this;
-    start_pc = code.PC;
+    start_try = code.getLabel();
   }
 
+  /* Skip TryStates without finally blocks, or if we're no longer in
+   * the try-clause. */
+  static TryState outerHandler (TryState innerTry, TryState outerTry)
+  {
+    while (innerTry != outerTry
+           && (innerTry.finally_subr == null || innerTry.tryClauseDone))
+      innerTry = innerTry.previous;
+    return innerTry;
+  }
+
+    /* DEBUGGING:
+    static int counter; int id=++counter;
+    public String toString() { return "TryState#"+id; }
+    */
 }

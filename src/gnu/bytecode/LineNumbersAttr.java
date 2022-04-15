@@ -22,9 +22,7 @@ public class LineNumbersAttr extends Attribute
   public LineNumbersAttr(CodeAttr code)
   {
     super("LineNumberTable");
-    setContainer(code); 
-    setNext(code.getAttributes()); 
-    code.setAttributes(this);
+    addToFrontOf(code);
     code.lines = this;
   }
 
@@ -56,6 +54,9 @@ public class LineNumbersAttr extends Attribute
 
   /** Get the number of line number entries. */
   public final int getLength() { return 2 + 4 * linenumber_count; }
+
+  public int getLineCount () { return linenumber_count; }
+  public short[] getLineNumberTable () { return linenumber_table; }
 
   public void write (DataOutputStream dstr) throws java.io.IOException
   {

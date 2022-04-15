@@ -158,7 +158,7 @@ public class ClassArchive implements Serializable {
 
    public String getClassName() throws IOException {
       if (className == null) {
-         this.className = classType.getNameOrSignature();
+         this.className = classType.getName();
       }
       return className;
    }

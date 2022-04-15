@@ -1,17 +1,9 @@
 ## Process this with automake to create Makefile.in
 
-AUTOMAKE_OPTIONS = foreign
-
-SUFFIXES = .java .class
-
-JAVAC = @JAVAC@
-JAVACFLAGS = -g
-SOURCES = $(java_JAVA)
-
-javadir=$(datadir)/java/$(subdir)
-
-java_JAVA=\
+java_sources = \
 Access.java \
+AnnotationDefaultAttr.java \
+AnnotationEntry.java \
 Attribute.java \
 AttrContainer.java \
 ObjectType.java ArrayType.java \
@@ -19,52 +11,53 @@ ClassType.java \
 ConstantPool.java \
 CpoolClass.java \
 CpoolEntry.java \
+CpoolInvokeDynamic.java \
 CpoolValue1.java \
 CpoolValue2.java \
 CpoolNameAndType.java \
+CpoolMethodHandle.java \
+CpoolMethodType.java \
 CpoolRef.java \
 CpoolString.java \
 CpoolUtf8.java \
+EnclosingMethodAttr.java \
+ExitableBlock.java \
+Filter.java \
 Location.java Field.java \
 Label.java IfState.java TryState.java SwitchState.java \
+Member.java \
 Method.java \
-CodeAttr.java CodeFragment.java \
+CodeAttr.java ConstantValueAttr.java \
 LineNumbersAttr.java LocalVarsAttr.java InnerClassesAttr.java \
 MiscAttr.java \
+ParameterizedType.java \
 PrimType.java \
+RuntimeAnnotationsAttr.java \
 Scope.java \
+SignatureAttr.java \
+SourceDebugExtAttr.java \
 SourceFileAttr.java \
+SpecialObjectType.java \
+StackMapTableAttr.java \
 Type.java \
+UninitializedType.java \
 Variable.java \
 VarEnumerator.java \
+TypeVariable.java \
 ZipArchive.java \
-ZipMember.java \
 ZipLoader.java \
 ArrayClassLoader.java \
 ClassFileInput.java \
 ClassTypeWriter.java \
 ExceptionsAttr.java \
-dump.java
+dump.java \
+ListCodeSize.java
 
-JC1FLAGS = -g
-GCC = ../../../gcc/xgcc -B../../../gcc/
+PACKAGE_FNAME = gnu-bytecode
+GCJ_INPUTS =  $(java_Java)
 
-gnu-bytecode.zip: classjava.stamp
-	cd ../..; \
-	  zip -q -r -n .class gnu/bytecode/gnu-bytecode.zip \
-	  gnu/bytecode -i '*.class' -x gnu/bytecode/ZipLoader.class
+EXTRA_DIST = package.html
 
-gnu-bytecode.o:  gnu-bytecode.zip
-	CLASSPATH=`pwd`/../../../libjava \
-	  $(GCC) -c -fassume-compiled $(JC1FLAGS) \
-	  -x java gnu-bytecode.zip -o gnu-bytecode.o
+include $(top_srcdir)/Make-rules
 
-dump-main.o:  dump-main.cc
-	$(GCC) -g -I$(srcdir)/../../../libjava/include -c \
-	  $(srcdir)/dump-main.cc -o dump-main.o	
-
-dump$(exext):  dump-main.o gnu-bytecode.o
-	$(GCC) -o dump dump-main.o gnu-bytecode.o \
-	  ../../../libjava/libjava.a
-
-EXTRA_DIST = overview.html
+all: Makefile java-classes.stamp $(@GCJ_COMPILED_SELECTED@)

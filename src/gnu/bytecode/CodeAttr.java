@@ -1,4 +1,4 @@
-// Copyright (c) 1997, 1998, 1999  Per M.A. Bothner.
+// Copyright (c) 1997, 1998, 1999, 2001, 2003, 2004, 2008 Per M.A. Bothner.
 // This is free software;  for terms and warranty disclaimer see ./COPYING.
 
 package gnu.bytecode;
@@ -25,34 +25,168 @@ public class CodeAttr extends Attribute implements AttrContainer
   public final void setAttributes (Attribute attributes)
   { this.attributes = attributes; }
   LineNumbersAttr lines;
-  LocalVarsAttr locals;
+  public LocalVarsAttr locals;
+  public StackMapTableAttr stackMap;
 
-  Type[] stack_types;
+  SourceDebugExtAttr sourceDbgExt;
+
+  public static final int GENERATE_STACK_MAP_TABLE = 1;
+  public static final int DONT_USE_JSR = 2;
+  int flags;
+
+  public Type[] stack_types;
+  Type[] local_types = new Type[20];
+
+  /** Previously-defined label. */
+  Label previousLabel;
+  /** Set of vars set in current block (since previousLabel).
+   * This is so we can differentiate variable set locally, versus definitions
+   * that reach us (and that might be invalidated by future flows). */
+  boolean[] varsSetInCurrentBlock;
+
   int SP;  // Current stack size (in "words")
   private int max_stack;
   private int max_locals;
+  /** Current active length of code array.
+   * Note that processFixups may expand/contract the code array.  */
   int PC;
-  // readPC (which is <= PC) is a bound on locations that have been
-  // saved into labels or otherwise externally seen.
-  // Hence, we cannot re-arrange code upto readPC, but we can
-  // rearrange code between readPC and PC.
-  int readPC;
   byte[] code;
+
+  boolean useJsr()
+  {
+    return (flags & DONT_USE_JSR) == 0;
+  }
 
   /* The exception handler table, as a vector of quadruples
      (start_pc, end_pc, handler_pc, catch_type).
-     Only the first exception_table_length quadrules are defined. */
+     Only the first exception_table_length quadruples are defined. */
   short[] exception_table;
 
   /* The number of (defined) exception handlers (i.e. quadruples)
      in exception_table. */
   int exception_table_length;
 
-  /* A chain of labels.  Unsorted, except that the Label with
-     the lowest element in fixups must be the first one. */
-  Label labels;
+  /** The definition of a label. */
+  static final int FIXUP_DEFINE = 0;
+  static final int FIXUP_DEFINE_UNREACHABLE = 1;
+  // From FIXUP_SWITCH up to FIXUP_TRANSFER2 must be contiguous
+  // - see the jump-to-jump optimization in processFixups.
+  /** The offset points to a tableswitch/lookupswitch - handle padding. */
+  static final int FIXUP_SWITCH = 2;
+  /** The offset contains a label relative to the previous FIXUP_SWITCH. */
+  static final int FIXUP_CASE = 3;
+  /** The offset points to a goto instruction. */
+  static final int FIXUP_GOTO = 4;
+  /** The offset points to a jsr instruction. */
+  static final int FIXUP_JSR = 5;
+  /** The offset points to a conditional transfer (if_xxx) instruction. */
+  static final int FIXUP_TRANSFER = 6;
+  /** A FIXUP_GOTO_, FIXUP_JSR, or FIXUP_TRANSFER that uses a 2-byte offset. */
+  static final int FIXUP_TRANSFER2 = 7;
+  /** The offsets points to 3 bytes that should be deleted. */
+  static final int FIXUP_DELETE3 = 8;
+  /** The following instructions are moved to later in the code stream.
+   * Instead the instructions starting at the fixup label are patched here.
+   * (If the fixup label is null, we're done.)
+   * This allows re-arranging code to avoid unneeded gotos.
+   * The following instruction is the target of a later FIXUP_MOVE,
+   * and we'll insert then when we get to it. */
+  static final int FIXUP_MOVE = 9;
+  /** The following instructions are moved to the end of the code stream.
+   * Same as FIXUP_MOVE, but there is no explicit later FIXUP_MOVE that
+   * refers to the following instructions.  Created by beginFragment.
+   * The fixup_offset points to the end of the fragment.
+   * (The first processFixups patches these to FIXUP_MOVE.) */
+  static final int FIXUP_MOVE_TO_END = 10;
+  /** FIXUP_TRY with the following FIXUP_TRY_END and FIXUP_TRY_HANDLER
+   * marks an exception handler.  The label is the start of the try clause;
+   * the current offset marks the exception handler. */
+  static final int FIXUP_TRY = 11;
+  /** Second part of a FIXUP_TRY/FIXUP_TRY_END/FIXUP_TRY_HANDLER set.
+   * The label is the end of the try clause;
+   * the current offset is the exception type as a constant pool index. */
+  static final int FIXUP_TRY_END = 12;
+  static final int FIXUP_TRY_HANDLER = 13;
+  /** With following FIXUP_LINE_NUMBER associates an offset with a line number.
+   * The fixup_offset is the code location; the fixup_label is null. */
+  static final int FIXUP_LINE_PC = 14;
+  /** With preceding FIXUP_LINE_PC associates an offset with a line number.
+   * The fixup_offset is the line number; the fixup_label is null. */
+  static final int FIXUP_LINE_NUMBER = 15;
+  int[] fixup_offsets;
+  Label[] fixup_labels;
+  /** Active length of fixup_offsets and fixup_labels.
+   * If {@code fixup_count == -1} we're not doing fixups. */
+  int fixup_count;
 
-  CodeFragment fragments;
+  /** This causes a later processFixup to rearrange the code.
+   * The code at target comes here, instead of the following instructions.
+   * Fuctionally equivalent to: <code>goto target; here:</code>,
+   * but implemented by code re-arranging.  Therefore there should be
+   * at some later point a <code>goto here; target:</code>.
+   */
+  public final void fixupChain (Label here, Label target)
+  {
+    fixupAdd(CodeAttr.FIXUP_MOVE, -1, target);
+    here.defineRaw(this);
+    setPreviousLabelHere(here);
+  }
+
+  /** Add a fixup at this location.
+   * @param kind one of the FIXUP_xxx codes.
+   * @param label varies - typically the target of jump. */
+  public final void fixupAdd (int kind, Label label)
+  {
+    fixupAdd(kind, PC, label);
+  }
+
+  final void fixupAdd (int kind, int offset, Label label)
+  {
+    if (label != null && kind != FIXUP_DEFINE && kind != FIXUP_DEFINE_UNREACHABLE
+        && kind != FIXUP_SWITCH && kind != FIXUP_TRY)
+      label.needsStackMapEntry = true;
+    int count = fixup_count;
+    if (count == 0)
+      {
+	fixup_offsets = new int[30];
+	fixup_labels = new Label[30];
+      }
+    else if (fixup_count == fixup_offsets.length)
+      {
+	int new_length = 2 * count;
+	Label[] new_labels = new Label[new_length];
+	System.arraycopy (fixup_labels, 0, new_labels, 0, count);
+	fixup_labels = new_labels;
+	int[] new_offsets = new int[new_length];
+	System.arraycopy (fixup_offsets, 0, new_offsets, 0, count);
+	fixup_offsets = new_offsets;
+      }
+    fixupSet(count, kind, offset);
+    fixup_labels[count] = label;
+    fixup_count = count + 1;
+  }
+
+  private final int fixupOffset(int index)
+  {
+    return fixup_offsets[index] >> 4;
+  }
+
+  private final int fixupKind(int index)
+  {
+    return fixup_offsets[index] & 15;
+  }
+
+    private void fixupSet(int index, int kind, int offset) {
+         fixup_offsets[index] = fixupEncode(kind, offset);
+    }
+    private int fixupEncode(int kind, int offset) {
+        return (offset << 4) | kind;
+    }
+
+  /** If true we get a line number entry for each instruction.
+   * Normally false, but can be a convenient hack to allow instruction-level
+   * stepping/debugging and stacktraces.  In this case {@code LINE==PC}. */
+  public static boolean instructionLineMode = false;
 
   /** The stack of currently active conditionals. */
   IfState if_stack;
@@ -64,6 +198,8 @@ public class CodeAttr extends Attribute implements AttrContainer
 
   public final int getPC() { return PC; }
 
+  public final int getSP() { return SP; }
+
   public final ConstantPool getConstants ()
   {
     return getMethod().classfile.constants;
@@ -71,9 +207,9 @@ public class CodeAttr extends Attribute implements AttrContainer
 
   /* True if we cannot fall through to bytes[PC] -
      the previous instruction was an uncondition control transfer.  */
-  boolean unreachable_here;
+  private boolean unreachable_here;
   /** True if control could reach here. */
-  public boolean reachableHere () { return !unreachable_here; }
+  public final boolean reachableHere () { return !unreachable_here; }
   public final void setReachable(boolean val) { unreachable_here = !val; }
   public final void setUnreachable() { unreachable_here = true; }
 
@@ -94,21 +230,21 @@ public class CodeAttr extends Attribute implements AttrContainer
     * @param code the code bytes (which are not copied).
     * Implicitly calls setCodeLength(code.length). */
   public void setCode(byte[] code) {
-    this.code = code; this.PC = code.length; readPC = PC; }
+    this.code = code; this.PC = code.length; }
   /** Set the length the the code (instruction bytes) of this method.
     * That is the number of current used bytes in getCode().
     * (Any remaing bytes provide for future growth.) */
-  public void setCodeLength(int len) { PC = len; readPC = len;}
+  public void setCodeLength(int len) { PC = len;}
   /** Set the current lengthof the code (instruction bytes) of this method. */
-  public int getCodeLength() { readPC = PC;  return PC; }
+  public int getCodeLength() { return PC; }
 
   public CodeAttr (Method meth)
   {
     super ("Code");
-    setContainer(meth);
-    setNext(meth.getAttributes());
-    meth.setAttributes(this);
+    addToFrontOf(meth);
     meth.code = this;
+    if (meth.getDeclaringClass().getClassfileMajorVersion() >= 50)
+      flags |= GENERATE_STACK_MAP_TABLE|DONT_USE_JSR;
   }
 
   public final void reserve (int bytes)
@@ -121,15 +257,16 @@ public class CodeAttr extends Attribute implements AttrContainer
 	System.arraycopy (code, 0, new_code, 0, PC);
 	code = new_code;
       }
+  }
 
-    while (labels != null && labels.fixups != null) {
-      int oldest_fixup = labels.fixups[0];
-      int threshold = unreachable_here ? 30000 : 32000;
-      if (PC + bytes - oldest_fixup > threshold)
-	labels.emit_spring (this);
-      else
-	break;
-    }
+  /** Get opcode that implements NOT (x OPCODE y). */
+  byte invert_opcode (byte opcode)
+  {
+    int iopcode = opcode & 0xFF;
+    if ((iopcode >= 153 && iopcode <= 166)
+	|| (iopcode >= 198 && iopcode <= 199))
+      return (byte) (iopcode ^ 1);
+    throw new Error("unknown opcode to invert_opcode");
   }
 
   /**
@@ -152,6 +289,7 @@ public class CodeAttr extends Attribute implements AttrContainer
     code[PC++] = (byte) (i);
     unreachable_here = false;
   }
+
   /**
    * Write a 32-bit int to the current code-stream
    * @param i the value to write
@@ -171,19 +309,135 @@ public class CodeAttr extends Attribute implements AttrContainer
     put2(cnst.index);
   }
 
+  public final void putLineNumber (String filename, int linenumber)
+  {
+    if (filename != null)
+      getMethod().classfile.setSourceFile(filename);
+    putLineNumber(linenumber);
+  }
+
   public final void putLineNumber (int linenumber)
   {
-    if (lines == null)
-      lines = new LineNumbersAttr(this);
-    readPC = PC;
-    lines.put(linenumber, PC);
+    if (sourceDbgExt != null)
+      linenumber = sourceDbgExt.fixLine(linenumber);
+    fixupAdd(FIXUP_LINE_PC, null);
+    fixupAdd(FIXUP_LINE_NUMBER, linenumber, null);
+  }
+
+  /** Initialize local_types from parameters. */
+  void noteParamTypes ()
+  {
+    Method method = getMethod();
+    int offset = 0;
+    if ((method.access_flags & Access.STATIC) == 0)
+      {
+        Type type = method.classfile;
+        if ("<init>".equals(method.getName())
+            && ! "java.lang.Object".equals(type.getName()))
+          type = UninitializedType.uninitializedThis((ClassType) type);
+        noteVarType(offset++, type);
+      }
+    int arg_count = method.arg_types.length;
+    for (int i = 0;  i < arg_count;  i++)
+      {
+        Type type = method.arg_types[i];
+        noteVarType(offset++, type);
+        for (int size = type.getSizeInWords(); -- size > 0; )
+          offset++;
+      }
+    if ((flags & GENERATE_STACK_MAP_TABLE) != 0)
+      {
+        stackMap = new StackMapTableAttr();
+        
+        int[] encodedLocals = new int[20+offset];
+        int count = 0;
+        for (int i = 0; i < offset;  i++)
+          {
+            int encoded = stackMap.encodeVerificationType(local_types[i], this);
+            encodedLocals[count++] = encoded;
+            int tag = encoded & 0xFF;
+            if (tag == 3 || tag == 4)
+              i++;
+          }
+        stackMap.encodedLocals = encodedLocals;
+        stackMap.countLocals = count;
+        stackMap.encodedStack = new int[10];
+        stackMap.countStack = 0;
+      }
+  }
+
+    void setPreviousLabelHere(Label here) {
+        previousLabel = here;
+        boolean[] varsSet = varsSetInCurrentBlock;
+        if (varsSet != null)
+            for (int i = varsSet.length;  --i >= 0; ) varsSet[i] = false;
+    }
+
+  public void noteVarType (int offset, Type type)
+  {
+    int size = type.getSizeInWords();
+    
+    if (local_types == null)
+      local_types = new Type[offset + size + 20]; 
+    else if (offset + size > local_types.length) {
+      Type[] new_array = new Type[2 * (offset + size)];
+      System.arraycopy (local_types, 0, new_array, 0, local_types.length);
+      local_types = new_array;
+    }
+    local_types[offset] = type;
+    if (varsSetInCurrentBlock == null)
+      varsSetInCurrentBlock = new boolean[local_types.length];
+    else if (varsSetInCurrentBlock.length <= offset)
+      {
+        boolean[] tmp = new boolean[local_types.length];
+        System.arraycopy(varsSetInCurrentBlock, 0, tmp, 0, varsSetInCurrentBlock.length);
+        varsSetInCurrentBlock = tmp;
+      }
+    varsSetInCurrentBlock[offset] = true;
+    if (offset > 0)
+      {
+        Type prev = local_types[offset-1];
+        if (prev != null && prev.getSizeInWords() == 2)
+          local_types[offset-1] = null;
+      }
+    while (--size > 0)
+      local_types[++offset] = null;
+  }
+
+  /** Set the current type state from a label. */
+  public final void setTypes (Label label)
+  {
+    setTypes(label.localTypes, label.stackTypes);
+  }
+
+  /** Set the current type state from a label. */
+  public final void setTypes (Type[] labelLocals, Type[] labelStack)
+  {
+    int usedStack = labelStack.length;
+    int usedLocals = labelLocals.length;
+    if (local_types != null)
+      {
+        if (usedLocals > 0)
+          System.arraycopy(labelLocals, 0, local_types, 0, usedLocals);
+        for (int i = usedLocals;  i < local_types.length;  i++)
+          local_types[i] = null;
+      }
+    if (stack_types == null || usedStack > stack_types.length)
+      stack_types = new Type[usedStack];
+    else
+      {
+        for (int i = usedStack;  i < stack_types.length;  i++)
+          stack_types[i] = null;
+      }
+    System.arraycopy(labelStack, 0, stack_types, 0, usedStack);
+    SP = usedStack;
   }
 
   public final void pushType(Type type)
   {
     if (type.size == 0)
       throw new Error ("pushing void type onto stack");
-    if (stack_types == null)
+    if (stack_types == null || stack_types.length == 0) // ??
       stack_types = new Type[20];
     else if (SP + 1 >= stack_types.length) {
       Type[] new_array = new Type[2 * stack_types.length];
@@ -191,7 +445,7 @@ public class CodeAttr extends Attribute implements AttrContainer
       stack_types = new_array;
     }
     if (type.size == 8)
-      stack_types[SP++] = Type.void_type;
+      stack_types[SP++] = Type.voidType;
     stack_types[SP++] = type;
     if (SP > max_stack)
       max_stack = SP;
@@ -240,16 +494,66 @@ public class CodeAttr extends Attribute implements AttrContainer
       }
   }
 
+  /** Get a new Label for the current location.
+   * Unlike Label.define, does not change reachableHere().
+   */
+  public Label getLabel ()
+  {
+    Label label = new Label();
+    label.defineRaw(this);
+    return label;
+  }
+
   public void emitSwap ()
   {
     reserve(1);
     Type type1 = popType();
     Type type2 = popType();
+
     if (type1.size > 4 || type2.size > 4)
-      throw new Error ("emitSwap:  not allowed for long or double");
-    pushType(type1);
-    put1(95);  // swap
-    pushType(type2);
+      {
+	// There is no swap instruction in the JVM for this case.
+	// Fall back to a more convoluted way.
+	pushType(type2);
+	pushType(type1);
+	emitDupX();
+	emitPop(1);
+      }
+    else
+      {
+	pushType(type1);
+	put1(95);  // swap
+	pushType(type2);
+      }
+  }
+
+  /** Emit code to duplicate the top element of the stack. */
+  public void emitDup ()
+  {
+    reserve(1);
+
+    Type type = topType();
+    put1 (type.size <= 4 ? 89 : 92); // dup or dup2
+    pushType (type);
+  }
+
+  /** Emit code to duplicate the top element of the stack
+      and place the copy before the previous element. */
+  public void emitDupX ()
+  {
+    reserve(1);
+
+    Type type = popType();
+    Type skipedType = popType();
+
+    if (skipedType.size <= 4)
+      put1 (type.size <= 4 ? 90 : 93); // dup_x1 or dup2_x1
+    else
+      put1 (type.size <= 4 ? 91 : 94); // dup_x2 or dup2_x2
+
+    pushType (type);
+    pushType (skipedType);
+    pushType (type);
   }
 
   /** Compile code to duplicate with offset.
@@ -337,37 +641,53 @@ public class CodeAttr extends Attribute implements AttrContainer
 
   public void enterScope (Scope scope)
   {
-    scope.start_pc = PC;
+    scope.setStartPC(this);
     locals.enterScope(scope);
   }
 
-  public Scope pushScope () {
+  public Scope pushScope ()
+  {
     Scope scope = new Scope ();
-    scope.start_pc = PC;
-    readPC = PC;
     if (locals == null)
-      locals = new LocalVarsAttr(this);
-    locals.enterScope(scope);
+      locals = new LocalVarsAttr(getMethod());
+    enterScope(scope);
     if (locals.parameter_scope == null) 
-      locals.parameter_scope= scope;
+      locals.parameter_scope = scope;
     return scope;
   }
 
-  public Scope popScope () {
-    Scope scope = locals.current_scope;
-    locals.current_scope = scope.parent;
-    scope.end_pc = PC;  readPC = PC;
-    for (Variable var = scope.vars; var != null; var = var.next) {
-      if (var.isSimple () && ! var.dead ())
-	var.freeLocal(this);
+    /** Create a Scope that is automatically popped.
+     * I.e. the next popScope will keep popping autoPop scopes until
+     * it gets to a non-autoPop scope.  An autoPop Scope is useful for
+     * variables that are assigned and set in the middle of a managed Scope.
+     */
+    public Scope pushAutoPoppableScope() {
+        Scope scope = pushScope();
+        scope.autoPop = true;
+        return scope;
     }
-    return scope;
+
+  public Scope getCurrentScope()
+  {
+    return locals.current_scope;
   }
+
+    public Scope popScope () {
+        Label end = getLabel();
+        for (;;) {
+            Scope scope = locals.current_scope;
+            locals.current_scope = scope.parent;
+            scope.freeLocals(this);
+            scope.end = end;
+            if (! scope.autoPop)
+                return scope;
+        }
+    }
 
   /** Get the index'th parameter. */
   public Variable getArg (int index)
   {
-    return locals.parameter_scope.find_var (index);
+    return locals.parameter_scope.getVariable(index);
   }
 
   /**
@@ -404,6 +724,17 @@ public class CodeAttr extends Attribute implements AttrContainer
     return locals.current_scope.addVariable (this, type, name);
   }
 
+  /** Call addLocal for parameters (as implied by method type). */
+  public void addParamLocals()
+  {
+    Method method = getMethod();
+    if ((method.access_flags & Access.STATIC) == 0)
+      addLocal(method.classfile).setParameter(true);
+    int arg_count = method.arg_types.length;
+    for (int i = 0;  i < arg_count;  i++)
+      addLocal(method.arg_types[i]).setParameter(true);
+  }
+
   public final void emitPushConstant(int val, Type type)
   {
     switch (type.getSignature().charAt(0))
@@ -421,23 +752,25 @@ public class CodeAttr extends Attribute implements AttrContainer
       }
   }
 
+  /* Low-level method to pust a ConstantPool entry.
+   * Does not do the appropriatre <code>pushType</code>. */
   public final void emitPushConstant (CpoolEntry cnst)
   {
     reserve(3);
     int index = cnst.index;
     if (cnst instanceof CpoolValue2)
       {
-      	put1 (20); // ldc2w
+      	put1 (20); // ldc2_w
 	put2 (index);
       }
     else if (index < 256)
       {
-	put1(18); // ldc1
+	put1(18); // ldc
 	put1(index);
       }
     else
       {
-	put1(19); // ldc2
+	put1(19); // ldc_w
 	put2(index);
       }
   }
@@ -461,7 +794,7 @@ public class CodeAttr extends Attribute implements AttrContainer
       {
 	emitPushConstant(getConstants().addInt(i));
       }
-    pushType(Type.int_type);
+    pushType(Type.intType);
   }
 
   public void emitPushLong (long i)
@@ -482,7 +815,7 @@ public class CodeAttr extends Attribute implements AttrContainer
       {
 	emitPushConstant(getConstants().addLong(i));
       }
-    pushType(Type.long_type);
+    pushType(Type.longType);
   }
 
   public void emitPushFloat (float x)
@@ -514,7 +847,7 @@ public class CodeAttr extends Attribute implements AttrContainer
       {
 	emitPushConstant(getConstants().addFloat(x));
       }
-    pushType(Type.float_type);
+    pushType(Type.floatType);
   }
 
   public void emitPushDouble (double x)
@@ -546,28 +879,223 @@ public class CodeAttr extends Attribute implements AttrContainer
       {
 	emitPushConstant(getConstants().addDouble(x));
       }
-    pushType(Type.double_type);
+    pushType(Type.doubleType);
   }
 
+  /** Calculate how many CONSTANT_String constants we need for a string.
+   * Each CONSTANT_String can be at most 0xFFFF bytes (as a UTF8 string).
+   * Returns a String, where each char, coerced to an int, is the length
+   * of a substring of the input that is at most 0xFFFF bytes.
+   */
+  public static final String calculateSplit (String str)
+  {
+    int strLength = str.length();
+    StringBuffer sbuf = new StringBuffer(20);
+    // Where the current segments starts, as an index in 'str':
+    int segmentStart = 0;
+    int byteLength = 0; // Length in bytes of current segment so far.
+    for (int i = 0;  i < strLength; i++)
+      {
+	char ch = str.charAt(i);
+	int bytes = ch >= 0x0800 ? 3 : ch >= 0x0080 || ch == 0 ? 2 : 1;
+	if (byteLength + bytes > 0xFFFF)
+	  {
+	    sbuf.append((char) (i - segmentStart));
+	    segmentStart = i;
+	    byteLength = 0;
+	  }
+	byteLength += bytes;
+      }
+    sbuf.append((char) (strLength - segmentStart));
+    return sbuf.toString();
+  }
+
+  /** Emit code to push the value of a constant String.
+   * Uses CONSTANT_String and CONSTANT_Utf8 constant pool entries as needed.
+   * Can handle Strings whose UTF8 length is greates than 0xFFFF bytes
+   * (the limit of a CONSTANT_Utf8) by generating String concatenation.
+   */
   public final void emitPushString (String str)
   {
-    emitPushConstant(getConstants().addString(str));
-    pushType(Type.string_type);
+    if (str == null)
+      emitPushNull();
+    else
+      {
+	int length = str.length();
+	String segments = calculateSplit(str);
+	int numSegments = segments.length();
+	if (numSegments <= 1)
+	  emitPushConstant(getConstants().addString(str));
+	else
+	  {
+	    if (numSegments == 2)
+	      {
+		int firstSegment = (int) segments.charAt(0);
+		emitPushString(str.substring(0, firstSegment));
+		emitPushString(str.substring(firstSegment));
+		Method concatMethod
+		  = Type.javalangStringType.getDeclaredMethod("concat", 1);
+		emitInvokeVirtual(concatMethod);
+	      }
+	    else
+	      {
+		ClassType sbufType = ClassType.make("java.lang.StringBuffer");
+		emitNew(sbufType);
+		emitDup(sbufType);
+		emitPushInt(length);
+		Type[] args1 = { Type.intType  };
+		emitInvokeSpecial(sbufType.getDeclaredMethod("<init>", args1));
+		Type[] args2 = { Type.javalangStringType    };
+		Method appendMethod
+		  = sbufType.getDeclaredMethod("append", args2);
+		int segStart = 0;
+		for (int seg = 0;  seg < numSegments;  seg++)
+		  {
+		    emitDup(sbufType);
+		    int segEnd = segStart + (int) segments.charAt(seg);
+		    emitPushString(str.substring(segStart, segEnd));
+		    emitInvokeVirtual(appendMethod);
+		    segStart = segEnd;
+		  }
+		emitInvokeVirtual(Type.toString_method);
+	      }
+	    if (str == str.intern())
+	      emitInvokeVirtual(Type.javalangStringType.getDeclaredMethod("intern", 0));
+	    return;
+	  }
+	pushType(Type.javalangStringType);
+      }
   }
 
-  public void emitPushNull ()
+  /** Push a class constant pool entry.
+   * This is only supported by JDK 1.5 and later. */
+  public final void emitPushClass (ObjectType ctype)
   {
-    reserve(1);
-    put1(1);  // aconst_null
-    pushType(Type.pointer_type);
+    emitPushConstant(getConstants().addClass(ctype));
+    pushType(Type.javalangClassType);
+  }
+
+    /** Push a MethodHandle, using an appropriate constant pool entry.
+     * This is only supported by JDK 1.6 and later.
+     */
+    public final void emitPushMethodHandle(Method method) {
+        emitPushConstant(getConstants().addMethodHandle(method));
+        pushType(Type.javalanginvokeMethodHandleType);
+    }
+
+    public void emitPushNull() { emitPushNull(Type.nullType); }
+
+    public void emitPushNull(ObjectType type) {
+        reserve(1);
+        put1(1);  // aconst_null
+        pushType(type);
+    }
+
+  /** Push zero or null as appropriate for the given type. */
+  public void emitPushDefaultValue (Type type)
+  { 
+    type = type.getImplementationType();
+    if (type instanceof PrimType)
+      emitPushConstant(0, type);
+    else
+      emitPushNull();
+  }
+
+  /** Initialize a variable to zero or null, as appropriate. */
+  public void emitStoreDefaultValue (Variable var)
+  {
+    emitPushDefaultValue(var.getType());
+    emitStore(var);
   }
 
   public final void emitPushThis()
   {
-    reserve(1);
-    put1(42);  // aload_0
-    pushType(getMethod().getDeclaringClass());
+    emitLoad(locals.used[0]);
   }
+
+  /** Emit code to push a constant primitive array.
+   * @param value The array value that we want the emitted code to re-create.
+   * @param arrayType The ArrayType that matches value.
+   */
+  public final void emitPushPrimArray(Object value, ArrayType arrayType)
+  {
+    Type elementType = arrayType.getComponentType();
+    int len = java.lang.reflect.Array.getLength(value);
+    emitPushInt(len);
+    emitNewArray(elementType);
+    char sig = elementType.getSignature().charAt(0);
+    for (int i = 0;  i < len;  i++)
+      {
+	long ival = 0;  float fval = 0;  double dval = 0;
+	switch (sig)
+	  {
+	  case 'J':
+	    ival = ((long[]) value)[i];
+	    if (ival == 0)
+	      continue;
+	    break;
+	  case 'I':
+	    ival = ((int[]) value)[i];
+	    if (ival == 0)
+	      continue;
+	    break;
+	  case 'S':
+	    ival = ((short[]) value)[i];
+	    if (ival == 0)
+	      continue;
+	    break;
+	  case 'C':
+	    ival = ((char[]) value)[i];
+	    if (ival == 0)
+	      continue;
+	    break;
+	  case 'B':
+	    ival = ((byte[]) value)[i];
+	    if (ival == 0)
+	      continue;
+	    break;
+	  case 'Z':
+	    ival = ((boolean[]) value)[i] ? 1 : 0;
+	    if (ival == 0)
+	      continue;
+	    break;
+	  case 'F':
+	    fval = ((float[]) value)[i];
+	    if (fval == 0.0)
+	      continue;
+	    break;
+	  case 'D':
+	    dval = ((double[]) value)[i];
+	    if (dval == 0.0)
+	      continue;
+	    break;
+	  }
+	emitDup(arrayType);
+	emitPushInt(i);
+	switch (sig)
+	  {
+	  case 'Z':
+	  case 'C':
+	  case 'B':
+	  case 'S':
+	  case 'I':
+	    emitPushInt((int) ival);
+	    break;
+	  case 'J':
+	    emitPushLong(ival);
+	    break;
+	  case 'F':
+	    emitPushFloat(fval);
+	    break;
+	  case 'D':
+	    emitPushDouble(dval);
+	    break;
+	  }
+	emitArrayStore(elementType);
+      }
+  }
+
+
 
   void emitNewArray (int type_code)
   {
@@ -583,16 +1111,16 @@ public class CodeAttr extends Attribute implements AttrContainer
     
     reserve(1);
     put1(190);  // arraylength
-    pushType(Type.int_type);
+    pushType(Type.intType);
   }
 
   /* Returns an integer in the range 0 (for 'int') through 4 (for object
      reference) to 7 (for 'short') which matches the pattern of how JVM
      opcodes typically depend on the operand type. */
 
-  private int adjustTypedOp  (Type type)
+  private int adjustTypedOp  (char sig)
   {
-    switch (type.getSignature().charAt(0))
+    switch (sig)
       {
       case 'I':  return 0;  // int
       case 'J':  return 1;  // long
@@ -606,16 +1134,27 @@ public class CodeAttr extends Attribute implements AttrContainer
       }
   }
 
+  private int adjustTypedOp  (Type type)
+  {
+    return adjustTypedOp(type.getSignature().charAt(0));
+  }
+
   private void emitTypedOp (int op, Type type)
   {
     reserve(1);
     put1(op + adjustTypedOp(type));
   }
 
+  private void emitTypedOp (int op, char sig)
+  {
+    reserve(1);
+    put1(op + adjustTypedOp(sig));
+  }
+
   /** Store into an element of an array.
    * Must already have pushed the array reference, the index,
    * and the new value (in that order).
-   * Stack:  ..., array, index, value => ...
+   * Stack:  {@literal ..., array, index, value => ...}
    */
   public void emitArrayStore (Type element_type)
   {
@@ -625,15 +1164,44 @@ public class CodeAttr extends Attribute implements AttrContainer
     emitTypedOp(79, element_type);
   }
 
+  /** Store into an element of an array.
+   * Must already have pushed the array reference, the index,
+   * and the new value (in that order).
+   * Stack: {@literal ..., array, index, value => ...}
+   */
+  public void emitArrayStore ()
+  {
+    popType();  // Pop new value
+    popType();  // Pop index
+    Type arrayType = popType().getImplementationType(); // Pop array reference
+    Type elementType = ((ArrayType) arrayType).getComponentType();
+    emitTypedOp(79, elementType);
+  }
+
   /** Load an element from an array.
    * Must already have pushed the array and the index (in that order):
-   * Stack:  ..., array, index => ..., value */
+   * Stack: {@literal ..., array, index => ..., value}
+   */
   public void emitArrayLoad (Type element_type)
   {
     popType();  // Pop index
     popType();  // Pop array reference
     emitTypedOp(46, element_type);
     pushType(element_type);
+  }
+
+  /** Load an element from an array.
+   * Equivalent to {@code emitArrayLoad(Type)}, but element_type is implied.
+   * Must already have pushed the array and the index (in that order):
+   * Stack: {@literal ..., array, index => ..., value}
+   */
+  public void emitArrayLoad ()
+  {
+    popType();  // Pop index
+    Type arrayType = popType().getImplementationType();
+    Type elementType = ((ArrayType) arrayType).getComponentType();
+    emitTypedOp(46, elementType);
+    pushType(elementType);
   }
 
   /**
@@ -644,18 +1212,21 @@ public class CodeAttr extends Attribute implements AttrContainer
   public void emitNew (ClassType type)
   {
     reserve(3);
+    Label label = new Label(this);
+    label.defineRaw(this);
     put1(187); // new
     putIndex2(getConstants().addClass(type));
-    pushType(type);
+    pushType(new UninitializedType(type, label));
   }
 
   /** Compile code to allocate a new array.
    * The size should have been already pushed on the stack.
-   * @param type type of the array elements
+   * @param element_type type of the array elements
+   * @param dims number of dimensions - more than 1 is untested
    */
   public void emitNewArray (Type element_type, int dims)
   {
-    if (popType ().promote () != Type.int_type)
+    if (popType ().promote () != Type.intType)
       throw new Error ("non-int dim. spec. in emitNewArray");
 
     if (element_type instanceof PrimType)
@@ -675,13 +1246,7 @@ public class CodeAttr extends Attribute implements AttrContainer
 	  }
 	emitNewArray(code);
       }
-    else if (element_type instanceof ObjectType)
-      {
-	reserve(3);
-	put1(189); // anewarray
-	putIndex2(getConstants().addClass((ObjectType) element_type));
-      }
-    else if (element_type instanceof ArrayType)
+    else if (element_type instanceof ArrayType && dims > 1) // untested
     {
       reserve(4);
       put1(197); // multianewarray
@@ -690,9 +1255,15 @@ public class CodeAttr extends Attribute implements AttrContainer
 	throw new Error ("dims out of range in emitNewArray");
       put1(dims);
       while (-- dims > 0) // first dim already popped
-	if (popType ().promote () != Type.int_type)
+	if (popType ().promote () != Type.intType)
 	  throw new Error ("non-int dim. spec. in emitNewArray");
     }
+    else if (element_type instanceof ObjectType)
+      {
+	reserve(3);
+	put1(189); // anewarray
+	putIndex2(getConstants().addClass((ObjectType) element_type));
+      }
     else
       throw new Error ("unimplemented type in emitNewArray");
 
@@ -704,6 +1275,7 @@ public class CodeAttr extends Attribute implements AttrContainer
     emitNewArray (element_type, 1);
   }
 
+  // We may want to deprecate this, because it depends on popType.
   private void emitBinop (int base_code)
   {
     Type type2 = popType().promote();
@@ -715,23 +1287,65 @@ public class CodeAttr extends Attribute implements AttrContainer
     pushType(type1_raw);
   }
 
+  private void emitBinop (int base_code, char sig)
+  {
+    popType();
+    popType();
+    emitTypedOp(base_code, sig);
+    pushType(Type.signatureToPrimitive(sig));
+  }
+
+  public void emitBinop (int base_code, Type type)
+  {
+    popType();
+    popType();
+    emitTypedOp(base_code, type);
+    pushType(type);
+  }
+
   // public final void emitIntAdd () { put1(96); popType();}
   // public final void emitLongAdd () { put1(97); popType();}
   // public final void emitFloatAdd () { put1(98); popType();}
   // public final void emitDoubleAdd () { put1(99); popType();}
 
+  public final void emitAdd(char sig) { emitBinop (96, sig); }
+  public final void emitAdd(PrimType type) { emitBinop (96, type); }
+  /** @deprecated */
   public final void emitAdd () { emitBinop (96); }
+
+  public final void emitSub(char sig) { emitBinop (100, sig); }
+  public final void emitSub(PrimType type) { emitBinop (100, type); }
+  /** @deprecated */
   public final void emitSub () { emitBinop (100); }
+
   public final void emitMul () { emitBinop (104); }
   public final void emitDiv () { emitBinop (108); }
   public final void emitRem () { emitBinop (112); }
-  public final void emitShl () { emitBinop (120); }
-  public final void emitShr () { emitBinop (122); }
-  public final void emitUshr() { emitBinop (124); }
   public final void emitAnd () { emitBinop (126); }
   public final void emitIOr () { emitBinop (128); }
   public final void emitXOr () { emitBinop (130); }
 
+  public final void emitShl () { emitShift (120); }
+  public final void emitShr () { emitShift (122); }
+  public final void emitUshr() { emitShift (124); }
+
+  private void emitShift (int base_code)
+  {
+    Type type2 = popType().promote();
+    Type type1_raw = popType();
+    Type type1 = type1_raw.promote();
+
+    if (type1 != Type.intType && type1 != Type.longType)
+      throw new Error ("the value shifted must be an int or a long");
+
+    if (type2 != Type.intType)
+      throw new Error ("the amount of shift must be an int");
+
+    emitTypedOp(base_code, type1);
+    pushType(type1_raw);
+  }
+
+  /** Compile 'not', assuming 0 or 1 is on the JVM stack. */
   public final void emitNot(Type type)
   {
     emitPushConstant(1, type);
@@ -765,7 +1379,7 @@ public class CodeAttr extends Attribute implements AttrContainer
   }
 
   /**
-   * Comple code to push the contents of a local variable onto the statck.
+   * Compile code to push the contents of a local variable onto the statck.
    * @param var The variable whose contents we want to push.
    */
   public final void emitLoad (Variable var)
@@ -788,13 +1402,14 @@ public class CodeAttr extends Attribute implements AttrContainer
 
   public void emitStore (Variable var)
   {
-   if (var.dead ())
-      throw new Error ("attempting to push dead variable");
+    if (! reachableHere())
+      return;
     int offset = var.offset;
     if (offset < 0 || !var.isSimple ())
-      throw new Error ("attempting to store in unassigned variable "+var.getName()
+      throw new Error ("attempting to store in unassigned "+var
 		       +" simple:"+var.isSimple()+", offset: "+offset);
     Type type = var.getType().promote ();
+    noteVarType(offset, type);
     reserve(4);
     popType();
     int kind = adjustTypedOp(type);
@@ -805,6 +1420,10 @@ public class CodeAttr extends Attribute implements AttrContainer
   }
 
 
+  /** Emit an instruction to increment a variable by some amount.
+   * If the increment is zero, do nothing.
+   * The variable must contain an integral value - except if increment is zero.
+   */
   public void emitInc (Variable var, short inc)
   {
     if (var.dead ())
@@ -813,13 +1432,15 @@ public class CodeAttr extends Attribute implements AttrContainer
     if (offset < 0 || !var.isSimple ())
       throw new Error ("attempting to increment unassigned variable"+var.getName()
 		       +" simple:"+var.isSimple()+", offset: "+offset);
-    Type type = var.getType().promote ();
+
+    if (inc == 0)
+      return;
+
     reserve(6);
-    if (type != Type.int_type)
+    if (var.getType().getImplementationType().promote() != Type.intType)
       throw new Error("attempting to increment non-int variable");
 
     boolean wide = offset > 255 || inc > 255 || inc < -256;
-
     if (wide)
     {
       put1(196); // wide
@@ -844,26 +1465,26 @@ public class CodeAttr extends Attribute implements AttrContainer
   }
 
   /** Compile code to get a static field value.
-   * Stack:  ... => ..., value */
+   * Stack: {@code ... => ..., value} */
 
   public final void emitGetStatic(Field field)
   {
-    pushType(field.type);
+    pushType(field.getType());
     emitFieldop (field, 178);  // getstatic
   }
 
   /** Compile code to get a non-static field value.
-   * Stack:  ..., objectref => ..., value */
+   * Stack: {@code ..., objectref => ..., value} */
 
   public final void emitGetField(Field field)
   {
     popType();
-    pushType(field.type);
+    pushType(field.getType());
     emitFieldop(field, 180);  // getfield
   }
 
   /** Compile code to put a static field value.
-   * Stack:  ..., value => ... */
+   * Stack: {@code ..., value => ...} */
 
   public final void emitPutStatic (Field field)
   {
@@ -881,27 +1502,85 @@ public class CodeAttr extends Attribute implements AttrContainer
     emitFieldop(field, 181);  // putfield
   }
 
+  /** Comptes the number of stack words taken by a list of types. */
+  private int words(Type[] types)
+  {
+    int res = 0;
+    for (int i=types.length; --i >= 0; )
+      if (types[i].size > 4)
+       res+=2;
+      else
+       res++;
+    return res;
+  }
+
   public void emitInvokeMethod (Method method, int opcode)
   {
+    if (! reachableHere())
+      return;
     reserve(opcode == 185 ? 5 : 3);
     int arg_count = method.arg_types.length;
     boolean is_invokestatic = opcode == 184;
+    boolean is_init = opcode == 183 && "<init>".equals(method.getName());
+
     if (is_invokestatic != ((method.access_flags & Access.STATIC) != 0))
       throw new Error
 	("emitInvokeXxx static flag mis-match method.flags="+method.access_flags);
-    if (!is_invokestatic)
+    if (!is_invokestatic && !is_init)
       arg_count++;
     put1(opcode);  // invokevirtual, invokespecial, or invokestatic
     putIndex2(getConstants().addMethodRef(method));
     if (opcode == 185)  // invokeinterface
       {
-	put1(arg_count);
+	put1(words(method.arg_types)+1); // 1 word for 'this'
 	put1(0);
       }
     while (--arg_count >= 0)
-      popType();
-    if (method.return_type.size != 0)
+      {
+        Type t = popType();
+        if (t instanceof UninitializedType)
+          throw new Error("passing "+t+" as parameter");
+      }
+    if (is_init)
+      {
+        Type t = popType();
+        ClassType ctype;
+        if (! (t instanceof UninitializedType))
+          throw new Error("calling <init> on already-initialized object");
+        ctype = ((UninitializedType) t).ctype;
+        for (int i = 0;  i < SP;  i++)
+          if (stack_types[i] == t)
+            stack_types[i] = ctype;
+        Variable[] used = locals.used;
+        for (int i = used == null ? 0 : used.length;  --i >= 0; )
+          {
+            Variable var = used[i];
+            if (var != null && var.getType() == t)
+                var.setType(ctype);
+          }
+        for (int i = local_types == null ? 0 : local_types.length;  --i >= 0; )
+          {
+            if (local_types[i] == t)
+                local_types[i] = ctype;
+          }
+      }
+   if (method.return_type.size != 0)
       pushType(method.return_type);
+  }
+
+  public void emitInvoke (Method method)
+  {
+    int opcode;
+    if ((method.access_flags & Access.STATIC) != 0)
+      opcode = 184;   // invokestatic
+    else if (method.classfile.isInterface())
+      opcode = 185;   // invokeinterface
+    else if ("<init>".equals(method.getName())
+             || (method.access_flags & Access.PRIVATE) != 0)
+      opcode = 183;   // invokespecial
+    else
+      opcode = 182;   // invokevirtual
+    emitInvokeMethod(method, opcode);
   }
 
   /** Compile a virtual method call.
@@ -934,33 +1613,10 @@ public class CodeAttr extends Attribute implements AttrContainer
   
   final void emitTransfer (Label label, int opcode)
   {
+    label.setTypes(this);
+    fixupAdd(FIXUP_TRANSFER, label);
     put1(opcode);
-    label.emit(this);
-  }
-
-  /** Compile an unconditional branch (goto) or a jsr.
-   * @param label target of the branch (must be in this method).
-   */
-  public final void emitGoto (Label label, int opcode)
-  {
-    reserve(5);
-    if (label.defined ())
-      {
-	readPC = PC;
-	int delta = label.position - PC;
-	if (delta < -32768)
-	  {
-	    put1(opcode-167);  // goto_w or jsr_w
-	    put4(delta);
-	  }
-	else
-	  {
-	    put1(opcode); // goto or jsr
-	    put2(delta);
-	  }
-      }
-    else
-      emitTransfer (label, opcode); // goto label or jsr label
+    PC += 2;
   }
 
   /** Compile an unconditional branch (goto).
@@ -968,56 +1624,44 @@ public class CodeAttr extends Attribute implements AttrContainer
    */
   public final void emitGoto (Label label)
   {
-    emitGoto(label, 167);
+    label.setTypes(this);
+    fixupAdd(FIXUP_GOTO, label);
+    reserve(3);
+    put1(167);
+    PC += 2;
     setUnreachable();
   }
 
-  //public final void compile_goto_ifeq (Label label, boolean invert)
-  public final void emitGotoIfEq (Label label, boolean invert)
+  public final void emitJsr (Label label)
   {
-    Type type2 = popType().promote();
-    Type type1 = popType().promote();
-    reserve(4);
-    int opcode;
-    char sig1 = type1.getSignature().charAt(0);
-    char sig2 = type2.getSignature().charAt(0);
-    if (sig1 == 'I' && sig2 == 'I')
-      opcode = 159;  // if_icmpeq (inverted: if_icmpne)
-    else if (sig1 == 'J' && sig2 == 'J')
-      {
-	put1(148);   // lcmp
-	opcode = 153;  // ifeq (inverted: ifne)
-      }
-    else if (sig1 == 'F' && sig2 == 'F')
-      {
-	put1(149);   // fcmpl
-	opcode = 153;  // ifeq (inverted: ifne)
-      }
-    else if (sig1 == 'D' && sig2 == 'D')
-      {
-	put1(151);   // dcmpl
-	opcode = 153;  // ifeq (inverted: ifne)
-      }
-    else if ((sig1 == 'L' || sig1 == '[')
-	     && (sig2 == 'L' || sig2 == '['))
-      opcode = 165;  // if_acmpeq (inverted: if_acmpne)
-    else
-      throw new Error ("non-matching types to compile_goto_ifeq");
-    if (invert)
-      opcode++;
-    emitTransfer (label, opcode);
+    fixupAdd(FIXUP_JSR, label);
+    reserve(3);
+    put1(168);
+    PC += 2;
   }
 
-  /** Compile a conditional transfer if 2 top stack elements are equal. */
-  public final void emitGotoIfEq (Label label)
+  ExitableBlock currentExitableBlock;
+  int exitableBlockLevel;
+
+  /** Enter a block which can be exited.
+   * Used to make sure finally-blocks are executed when exiting a block,
+   * loop, or method.
+   */
+  public ExitableBlock startExitableBlock (Type resultType, boolean runFinallyBlocks)
   {
-    emitGotoIfEq(label, false);
+    ExitableBlock bl = new ExitableBlock(resultType, this, runFinallyBlocks);
+    bl.outer = currentExitableBlock;
+    currentExitableBlock = bl;
+    return bl;
   }
 
-  /** Compile conditional transfer if 2 top stack elements are not equal. */
-  public final void emitGotoIfNE (Label label)
+  /** End a block entered by a previous startExitableBlock.
+   */
+  public void endExitableBlock ()
   {
-    emitGotoIfEq(label, true);
+    ExitableBlock bl = currentExitableBlock;
+    bl.finish();
+    currentExitableBlock = bl.outer;
   }
 
   public final void emitGotoIfCompare1 (Label label, int opcode)
@@ -1039,11 +1683,15 @@ public class CodeAttr extends Attribute implements AttrContainer
   { emitGotoIfCompare1(label, 157); }
   public final void emitGotoIfIntLeZero(Label label)
   { emitGotoIfCompare1(label, 158); }
+  public final void emitGotoIfNull(Label label)
+  { emitGotoIfCompare1(label, 198); }
+  public final void emitGotoIfNonNull(Label label)
+  { emitGotoIfCompare1(label, 199); }
 
   public final void emitGotoIfCompare2 (Label label, int logop)
   { 
-    if( logop < 155 || logop > 158 )
-      throw new Error ("emitGotoIfCompare2: logop must be one of iflt, ifgt, ifle, ifge");
+    if( logop < 153 || logop > 158 )
+      throw new Error ("emitGotoIfCompare2: logop must be one of ifeq...ifle");
     
     Type type2 = popType().promote();
     Type type1 = popType().promote();
@@ -1061,13 +1709,35 @@ public class CodeAttr extends Attribute implements AttrContainer
       put1(cmpg ? 149 : 150);   // fcmpl/fcmpg
     else if (sig1 == 'D' && sig2 == 'D')
       put1(cmpg ? 151 : 152);   // dcmpl/dcmpg
+    else if ((sig1 == 'L' || sig1 == '[')
+	     && (sig2 == 'L' || sig2 == '[')
+	     && logop <= 154)
+      logop += 12; // ifeq->if_acmpeq, ifne->if_acmpne
     else
-      throw new Error ("non-matching types to emitGotoIfCompare2");
+      throw new Error ("invalid types to emitGotoIfCompare2");
 
     emitTransfer (label, logop);
   }
 
   // binary comparisons
+  /** @deprecated */
+  public final void emitGotoIfEq (Label label, boolean invert)
+  {
+    emitGotoIfCompare2(label, invert ? 154 : 153);
+  }
+
+  /** Compile a conditional transfer if 2 top stack elements are equal. */
+  public final void emitGotoIfEq (Label label)
+  {
+    emitGotoIfCompare2(label, 153);
+  }
+
+  /** Compile conditional transfer if 2 top stack elements are not equal. */
+  public final void emitGotoIfNE (Label label)
+  {
+    emitGotoIfCompare2(label, 154);
+  }
+
   public final void emitGotoIfLt(Label label)
   { emitGotoIfCompare2(label, 155); }
   public final void emitGotoIfGe(Label label)
@@ -1078,119 +1748,137 @@ public class CodeAttr extends Attribute implements AttrContainer
   { emitGotoIfCompare2(label, 158); }
 
 
-  /** Compile start of a conditional:  if (!(x OPCODE 0)) ...
-   * The value of x must already have been pushed. */
+  /** Compile start of a conditional:
+   *   <tt>if (!(<var>x</var> opcode 0)) ...</tt>.
+   * The value of <var>x</var> must already have been pushed. */
   public final void emitIfCompare1 (int opcode)
   {
-    IfState new_if = new IfState(this);
-    if (popType().promote() != Type.int_type)
+    IfState new_if = pushIfState();
+    if (popType().promote() != Type.intType)
       throw new Error ("non-int type to emitIfCompare1");
     reserve(3);
     emitTransfer (new_if.end_label, opcode);
-    new_if.start_stack_size = SP;
   }
 
-  /** Compile start of conditional:  if (x != 0) */
+  /** Compile start of conditional:  <tt>if (x != 0) ...</tt>.
+   * Also use this if you have pushed a boolean value:  if (b) ... */
   public final void emitIfIntNotZero()
   {
     emitIfCompare1(153); // ifeq
   }
 
-  /** Compile start of a conditional:  if (!(x OPCODE null)) ...
-   * The value of x must already have been pushed and must be of
+  /** Compile start of conditional:  <tt>if (x == 0) ...</tt>.
+   * Also use this if you have pushed a boolean value:  if (!b) ... */
+  public final void emitIfIntEqZero()
+  {
+    emitIfCompare1(154); // ifne
+  }
+
+  /** Compile start of conditional:  {@code if (x <= 0)}. */
+  public final void emitIfIntLEqZero()
+  {
+    emitIfCompare1(157); // ifgt
+  }
+
+  /** Compile start of conditional:  {@code if (x >= 0)}. */
+  public final void emitIfIntGEqZero()
+  {
+    emitIfCompare1(155); // iflt
+  }
+
+  /** Compile start of a conditional:  {@code if (!(x opcode null)) ...}.
+   * The value of <tt>x</tt> must already have been pushed and must be of
    * reference type. */
   public final void emitIfRefCompare1 (int opcode)
   {
-    IfState new_if = new IfState(this);
+    IfState new_if = pushIfState();
     if (! (popType() instanceof ObjectType))
       throw new Error ("non-ref type to emitIfRefCompare1");
     reserve(3);
     emitTransfer (new_if.end_label, opcode);
-    new_if.start_stack_size = SP;
   }  
   
-  /** Compile start of conditional:  if (x != null) */
+  /** Compile start of conditional:  {@code if (x != null) ...}. */
   public final void emitIfNotNull()
   {
     emitIfRefCompare1(198); // ifnull
   }
 
-  /** Compile start of conditional:  if (x == null) */
+  /** Compile start of conditional:  {@code if (x == null) ...} */
   public final void emitIfNull()
   {
     emitIfRefCompare1(199); // ifnonnull
   }  
   
-  /** Compile start of a conditional:  if (!(x OPCODE y)) ...
+  /** Compile start of a conditional:  {@code if (!(x OPCODE y)) ...}
    * The value of x and y must already have been pushed. */
   public final void emitIfIntCompare(int opcode)
   {
-    IfState new_if = new IfState(this);
+    IfState new_if = pushIfState();
     popType();
     popType();
     reserve(3);
     emitTransfer(new_if.end_label, opcode);
-    new_if.start_stack_size = SP;
   }
 
-  /* Compile start of a conditional:  if (x < y) ... */
+  /* Compile start of a conditional:  {@code if (x < y) ...} */
   public final void emitIfIntLt()
   {
     emitIfIntCompare(162);  // if_icmpge
+  }
+
+  /* Compile start of a conditional:  {@code if (x >= y) ...} */
+  public final void emitIfIntGEq()
+  {
+    emitIfIntCompare(161);  // if_icmplt
   }
 
   /** Compile start of a conditional:  if (x != y) ...
    * The values of x and y must already have been pushed. */
   public final void emitIfNEq ()
   {
-    IfState new_if = new IfState (this);
+    IfState new_if = pushIfState();
     emitGotoIfEq(new_if.end_label);
-    new_if.start_stack_size = SP;
   }
 
-  /** Compile start of a conditional:  if (x == y) ...
+  /** Compile start of a conditional:  {@code if (x == y) ...}
    * The values of x and y must already have been pushed. */
   public final void emitIfEq ()
   {
-    IfState new_if = new IfState (this);
+    IfState new_if = pushIfState();
     emitGotoIfNE(new_if.end_label);
-    new_if.start_stack_size = SP;
   }
 
-  /** Compile start of a conditional:  if (x < y) ...
+  /** Compile start of a conditional:  {@code if (x < y) ...}
    * The values of x and y must already have been pushed. */
   public final void emitIfLt ()
   {
-    IfState new_if = new IfState (this);
+    IfState new_if = pushIfState();
     emitGotoIfGe(new_if.end_label);
-    new_if.start_stack_size = SP;
   }
 
-  /** Compile start of a conditional:  if (x >= y) ...
+  /** Compile start of a conditional:  {@code if (x >= y) ...}
    * The values of x and y must already have been pushed. */
   public final void emitIfGe ()
   {
-    IfState new_if = new IfState (this);
+    IfState new_if = pushIfState();
     emitGotoIfLt(new_if.end_label);
-    new_if.start_stack_size = SP;
   }
 
-  /** Compile start of a conditional:  if (x > y) ...
+  /** Compile start of a conditional:  {@code if (x > y) ...}
    * The values of x and y must already have been pushed. */
   public final void emitIfGt ()
   {
-    IfState new_if = new IfState (this);
+    IfState new_if = pushIfState();
     emitGotoIfLe(new_if.end_label);
-    new_if.start_stack_size = SP;
   }
 
-  /** Compile start of a conditional:  if (x <= y) ...
+  /** Compile start of a conditional:  {@code if (x <= y) ...}
    * The values of x and y must already have been pushed. */
   public final void emitIfLe ()
   {
-    IfState new_if = new IfState (this);
+    IfState new_if = pushIfState();
     emitGotoIfGt(new_if.end_label);
-    new_if.start_stack_size = SP;
   }
 
   /** Emit a 'ret' instruction.
@@ -1213,85 +1901,122 @@ public class CodeAttr extends Attribute implements AttrContainer
       }
   }
 
+  public final void emitThen()
+  {
+  }
+
   public final void emitIfThen ()
   {
-    new IfState(this);
+    new IfState(this, null);
   }
 
   /** Compile start of else clause. */
   public final void emitElse ()
   {
     Label else_label = if_stack.end_label;
-    Label end_label = new Label (this);
-    if_stack.end_label = end_label;
     if (reachableHere ())
       {
-	int stack_growth = SP-if_stack.start_stack_size;
-	if_stack.then_stacked_types = new Type[stack_growth];
-	System.arraycopy (stack_types, if_stack.start_stack_size,
-			  if_stack.then_stacked_types, 0, stack_growth);
+        Label end_label = new Label (this);
+        if_stack.end_label = end_label;
 	emitGoto (end_label);
       }
-    while (SP != if_stack.start_stack_size)
-      popType();
-    else_label.define (this);
+    else
+      if_stack.end_label = null;
+    if (else_label != null)
+      else_label.define (this);
     if_stack.doing_else = true;    
   }
 
   /** Compile end of conditional. */
   public final void emitFi ()
   {
-    boolean make_unreachable = false;
-    if (! if_stack.doing_else)
-      { // There was no 'else' clause.
-	if (reachableHere ()
-	    && SP != if_stack.start_stack_size)
-	  throw new Error("at PC "+PC+" then clause grows stack with no else clause");
-      }
-    else if (if_stack.then_stacked_types != null)
-      {
-	int then_clause_stack_size
-	  = if_stack.start_stack_size + if_stack.then_stacked_types.length;
-	if (! reachableHere ())
-	  {
-	    System.arraycopy (if_stack.then_stacked_types, 0,
-			      stack_types, if_stack.start_stack_size,
-			      if_stack.then_stacked_types.length);
-	    SP = then_clause_stack_size;
-	  }
-	else if (SP != then_clause_stack_size)
-	  throw new Error("at PC "+PC+": SP at end of 'then' was " +
-			   then_clause_stack_size
-			   + " while SP at end of 'else' was " + SP);
-      }
-    else if (unreachable_here)
-      make_unreachable = true;
-
-    if_stack.end_label.define (this);
-    if (make_unreachable)
-      setUnreachable();
+    if (if_stack.end_label != null)
+      if_stack.end_label.define (this);
     // Pop the if_stack.
     if_stack = if_stack.previous;
   }
 
-  public final void emitConvert (Type from, Type to)
-  {
-    String to_sig = to.getSignature();
-    String from_sig = from.getSignature();
-    int op = -1;
-    if (to_sig.length() == 1 || from_sig.length() == 1)
-      {
+    /** Convenience for compiling {@code if P1 && P2 then S1 else S2}.
+     * Compile that as:
+     * <pre>
+     * compile P1, including an appropriate emitIfXxx
+     * emitAndThen()
+     * compile P2, including an appropriate emitIfXxx
+     * compile S1
+     * emitElse
+     * compile S2
+     * emitFi
+     * </pre>
+     */
+    public void emitAndThen() {
+        if (if_stack==null||if_stack.andThenSet) throw new InternalError();
+        if_stack.andThenSet = true;
+    }
+
+    private IfState pushIfState() {
+        if (if_stack!=null && if_stack.andThenSet) {
+            if_stack.andThenSet = false;
+            return if_stack;
+        }
+        return new IfState(this);
+    }
+
+    public final void fixUnsigned(Type stackType) {
+        if (stackType instanceof PrimType
+            && ((PrimType) stackType).isUnsigned()) {
+            char sig1 = stackType.getSignature().charAt(0);
+            if (sig1 == 'S') {
+                reserve(1);
+                put1(146); // i2c
+            } else if (sig1 == 'B') {
+                emitPushInt(255);
+                emitAnd();
+            }
+        }
+    }
+
+    public final void emitConvert(PrimType from, PrimType to) {
+        String to_sig = to.getSignature();
+        String from_sig = from.getSignature();
+        int op = -1;
 	char to_sig0 = to_sig.charAt(0);
 	char from_sig0 = from_sig.charAt(0);
+	if (from_sig0 == to_sig0)
+            return;
 	if (from.size < 4)
 	  from_sig0 = 'I';
-	if (to.size < 4)
-	  {
-	    emitConvert(from, Type.int_type);
+	if (to.size < 4) {
+	    emitConvert(from, Type.intType);
 	    from_sig0 = 'I';
-	  }
+            if (to.isUnsigned()) {
+                if (to_sig0 == 'S')
+                    to_sig0 = 'C';
+                else if (to_sig0 == 'B') {
+                    emitPushInt(0xff);
+                    emitAnd();
+                    return;
+                }
+            }
+        }
+        if (from_sig0 == 'J' && from.isUnsigned()
+            && (to_sig0 == 'F' || to_sig0 == 'D')) {
+            emitPushInt(1);
+            emitUshr();
+            emitConvert(Type.longType, to);
+            emitPushConstant(2, to);
+            emitMul();
+            return;
+        }
+        if (from_sig0 == 'I' && from.isUnsigned()
+            && (to_sig0 == 'J' || to_sig0 == 'F' || to_sig0 == 'D')) {
+            emitConvert(Type.intType, Type.longType);
+            reserve(4);
+            emitPushLong(0xffffffffL);
+            emitAnd();
+            from_sig0 = 'J';
+        }
 	if (from_sig0 == to_sig0)
-	  return;
+            return;
 	switch (from_sig0)
 	  {
 	  case 'I':
@@ -1330,45 +2055,63 @@ public class CodeAttr extends Attribute implements AttrContainer
 	      }
 	    break;
 	  }
-      }
-    if (op < 0)
-      throw new Error ("unsupported Method.compile_convert");
-    reserve(1);
-    popType();
-    put1(op);
-    pushType(to);
-  }
+        if (op < 0)
+            throw new Error ("unsupported CodeAttr.emitConvert");
+        reserve(1);
+        popType();
+        put1(op);
+        pushType(to);
+    }
 
   private void emitCheckcast (Type type, int opcode)
   {
     reserve(3);
     popType();
     put1(opcode);
-    if (type instanceof ArrayType)
+    if (type instanceof ObjectType)
       {
-	ArrayType atype = (ArrayType) type;
-	CpoolUtf8 name = getConstants().addUtf8(atype.signature);
-	putIndex2(getConstants().addClass(name));
-      }
-    else if (type instanceof ClassType)
-      {
-	putIndex2(getConstants().addClass((ClassType) type));
+	putIndex2(getConstants().addClass((ObjectType) type));
       }
     else
       throw new Error ("unimplemented type " + type
 		       + " in emitCheckcast/emitInstanceof");
   } 
 
+  public static boolean castNeeded (Type top, Type required)
+  {
+    top = top.getRawType();
+    for (;;)
+      {
+        if (top == required)
+          return false;
+        if (required instanceof ClassType
+            && top instanceof ClassType
+            && ((ClassType) top).isSubclass((ClassType) required))
+          return false;
+        else if (required instanceof ArrayType
+                 && top instanceof ArrayType)
+          {
+            required = ((ArrayType) required).getComponentType();
+            top = ((ArrayType) top).getComponentType();
+            continue;
+          }
+        return true;
+      }
+  }
+
   public void emitCheckcast (Type type)
   {
-    emitCheckcast(type, 192);
-    pushType(type);
+    if (castNeeded(topType(), type))
+      {
+        emitCheckcast(type, 192);
+        pushType(type);
+      }
   }
 
   public void emitInstanceof (Type type)
   {
     emitCheckcast(type, 193);
-    pushType(Type.boolean_type);
+    pushType(Type.booleanType);
   }
 
   public final void emitThrow ()
@@ -1395,9 +2138,21 @@ public class CodeAttr extends Attribute implements AttrContainer
 
   /**
    * Compile a method return.
+   * If inside a 'catch' clause, first call 'finally' clauses.
+   * The return value (unless the return type is void) must be on the stack,
+   * and have the correct type.
    */
   public final void emitReturn ()
   {
+    if (try_stack != null)
+      new Error();
+    emitRawReturn();
+  }
+
+  final void emitRawReturn ()
+  {
+    if (! reachableHere())
+      return;
     if (getMethod().getReturnType().size == 0)
       {
 	reserve(1);
@@ -1407,8 +2162,10 @@ public class CodeAttr extends Attribute implements AttrContainer
       emitTypedOp (172, popType().promote());
     setUnreachable();
   }
+  
 
-  /** Add an exception handler. */
+  /** Add an exception handler.
+    * Low-level routine; {@code #emitCatchStart} is preferred. */
   public void addHandler (int start_pc, int end_pc,
 			  int handler_pc, int catch_type)
   {
@@ -1430,125 +2187,278 @@ public class CodeAttr extends Attribute implements AttrContainer
     exception_table_length++;
   }
 
-  /** Add an exception handler. */
-  public void addHandler (int start_pc, int end_pc, int handler_pc,
-			  ClassType catch_type, ConstantPool constants)
+  /** Add an exception handler.
+   * Low-level routine; {@link #emitCatchStart} is preferred. */
+  public void addHandler (Label start_try, Label end_try,
+			  ClassType catch_type)
   {
+    ConstantPool constants = getConstants();
     int catch_type_index;
     if (catch_type == null)
       catch_type_index = 0;
     else
       catch_type_index = constants.addClass(catch_type).index;
-    addHandler(start_pc, end_pc, handler_pc, catch_type_index);
+    fixupAdd(FIXUP_TRY, start_try);
+    fixupAdd(FIXUP_TRY_END, catch_type_index, end_try);
+    Label handler = new Label();
+    handler.localTypes = start_try.localTypes;
+    handler.stackTypes = new Type[1];
+    Type handler_class = catch_type == null ? Type.javalangThrowableType : catch_type;
+    handler.stackTypes[0] = handler_class;
+    setTypes(handler);
+    fixupAdd(FIXUP_TRY_HANDLER, 0, handler);
+    setReachable(true);
+  }
+
+  /** Beginning of code that has a cleanup handler.
+   * This is similar to a try-finally, but the cleanup is only
+   * done in the case of an exception.  Alternatively, the try clause
+   * has to manually do the cleanup with code duplication.
+   * Equivalent to: <code>try <var>body</var> catch (Throwable ex) { <var>cleanup</var>; throw ex; }</code>
+   * Call <code>emitWithCleanupStart</code> before the <code><var>body</var></code>.
+   */
+  public void emitWithCleanupStart ()
+  {
+    int savedSP = SP;
+    SP = 0; // Hack to disable emitTryStart needlessly saving the stack.
+    emitTryStart(false, null);
+    SP = savedSP;
+  }
+
+  /** Called after a <code><var>body</var></code> that has a <code><var>cleanup</var></code> clause.
+   * Followed by the <code><var>cleanup</var></code> code.
+   */
+  public void emitWithCleanupCatch (Variable catchVar)
+  {
+    emitTryEnd(false);
+    try_stack.saved_result = catchVar;
+    emitCatchStart(catchVar);
+  }
+
+  /** Called after generating a <code><var>cleanup</var></code> handler. */
+
+  public void emitWithCleanupDone ()
+  {
+    Variable catchVar = try_stack.saved_result;
+    try_stack.saved_result = null;
+    if (catchVar != null)
+      emitLoad(catchVar);
+    emitThrow();
+    emitCatchEnd();
+    emitTryCatchEnd();
   }
 
 
   public void emitTryStart(boolean has_finally, Type result_type)
   {
-    TryState try_state = new TryState(this);
-    if (result_type != null && result_type.size == 0) // void
+    if (result_type != null && result_type.isVoid())
       result_type = null;
+    Variable[] savedStack = null;
     if (result_type != null || SP > 0)
-      {
-	pushScope();
-	if (result_type != null)
-	  try_state.saved_result = addLocal(result_type);
-      }
+      pushScope();
     if (SP > 0)
       {
-	try_state.savedStack = new Variable[SP];
+	savedStack = new Variable[SP];
 	int i = 0;
 	while (SP > 0)
 	  {
 	    Variable var = addLocal(topType());
 	    emitStore(var);
-	    try_state.savedStack[i++] = var;
+	    savedStack[i++] = var;
 	  }
       }
-    if (has_finally)
-      try_state.finally_subr = new Label(this);
-  }
+    TryState try_state = new TryState(this);
+    try_state.savedStack = savedStack;
 
-  public void emitTryEnd()
-  {
-    if (try_stack.end_label == null)
+    int usedLocals = local_types == null ? 0 : local_types.length;
+    for (; usedLocals > 0; usedLocals--)
       {
-	if (try_stack.saved_result != null)
-	  emitStore(try_stack.saved_result);
-	try_stack.end_label = new Label(this);
-	if (reachableHere())
-	  {
-	    if (try_stack.finally_subr != null)
-	      emitGoto(try_stack.finally_subr, 168);  // jsr
-	    emitGoto(try_stack.end_label);
-	  }
-	readPC = PC;
-	try_stack.end_pc = PC;
+        Type last = local_types[usedLocals-1];
+        if (last != null)
+          break;
       }
+
+    Type[] startLocals;
+    if (usedLocals == 0)
+      startLocals = Type.typeArray0;
+    else
+      {
+        startLocals = new Type[usedLocals];
+        System.arraycopy(local_types, 0, startLocals, 0, usedLocals);
+      }
+    try_state.start_try.localTypes = startLocals;
+
+    if (result_type != null)
+      try_state.saved_result = addLocal(result_type);
+    if (has_finally)
+      try_state.finally_subr = new Label();
   }
 
-  public void emitCatchStart(Variable var)
+    @Deprecated
+    public void emitTryEnd() {
+    }
+
+  private void emitTryEnd (boolean fromFinally)
   {
-    emitTryEnd();
-    SP = 0;
+    if (try_stack.tryClauseDone)
+      return;
+    try_stack.tryClauseDone = true;
+    if (try_stack.finally_subr != null)
+      try_stack.exception = addLocal(Type.javalangThrowableType);
+    gotoFinallyOrEnd(fromFinally);
+    try_stack.end_try = getLabel();
+  }
+
+    public void emitCatchStart(Variable var) {
+        if (var == null)
+            emitCatchStart((ClassType) null);
+        else {
+            emitCatchStart((ClassType) var.getType());
+            emitStore(var);
+        }
+    }
+
+  public void emitCatchStart(ClassType type)
+  {
+    emitTryEnd(false);
+    setTypes(try_stack.start_try.localTypes, Type.typeArray0);
     if (try_stack.try_type != null)
       emitCatchEnd();
-    ClassType type = var == null ? null : (ClassType) var.getType();
     try_stack.try_type = type;
-    readPC = PC;
-    addHandler(try_stack.start_pc, try_stack.end_pc,
-	       PC, type, getConstants());
-    if (var != null)
-      {
-	pushType(type);
-	emitStore(var);
-      }
-    else
-      pushType(Type.throwable_type);
+    addHandler(try_stack.start_try, try_stack.end_try, type);
+    setReachable(true);
   }
 
   public void emitCatchEnd()
+  {
+    gotoFinallyOrEnd(false);
+    try_stack.try_type = null;
+  }
+
+  private void gotoFinallyOrEnd (boolean fromFinally)
   {
     if (reachableHere())
       {
 	if (try_stack.saved_result != null)
 	  emitStore(try_stack.saved_result);
-	if (try_stack.finally_subr != null)
-	  emitGoto(try_stack.finally_subr, 168); // jsr
-	emitGoto(try_stack.end_label);
+        if (try_stack.end_label == null)
+          try_stack.end_label = new Label();
+	if (try_stack.finally_subr == null || useJsr())
+          {
+            if (try_stack.finally_subr != null)
+              emitJsr(try_stack.finally_subr);
+            emitGoto(try_stack.end_label);
+          }
+        else
+          {
+            if (try_stack.exitCases != null)
+              emitPushInt(0);
+            emitPushNull(); // No caught Throwable.
+            if (! fromFinally)
+              emitGoto(try_stack.finally_subr);
+          }
       }
-    try_stack.try_type = null;
   }
 
   public void emitFinallyStart()
   {
-    emitTryEnd();
+    emitTryEnd(true);
     if (try_stack.try_type != null)
       emitCatchEnd();
-    readPC = PC;
-    SP = 0;
-    try_stack.end_pc = PC;
+    try_stack.end_try = getLabel();
 
     pushScope();
-    Type except_type = Type.pointer_type;
-    Variable except = addLocal(except_type);
-    emitCatchStart(null);
-    emitStore(except);
-    emitGoto(try_stack.finally_subr, 168); // jsr
-    emitLoad(except);
-    emitThrow();
-    
+    if (useJsr())
+      {
+        SP = 0;
+        emitCatchStart((ClassType) null);
+        emitStore(try_stack.exception);
+        emitJsr(try_stack.finally_subr);
+        emitLoad(try_stack.exception);
+        emitThrow();
+      }
+    else
+      {
+        if (reachableHere())
+          emitGoto(try_stack.finally_subr);
+        addHandler(try_stack.start_try, try_stack.end_try, Type.javalangThrowableType);
+        if (try_stack.saved_result != null)
+          emitStoreDefaultValue(try_stack.saved_result);
+        if (try_stack.exitCases != null)
+          {
+            emitPushInt(-1);  // Return switch case code.
+            emitSwap();
+          }
+      }
     try_stack.finally_subr.define(this);
-    Type ret_addr_type = Type.pointer_type;
-    try_stack.finally_ret_addr = addLocal(ret_addr_type);
-    pushType(ret_addr_type);
-    emitStore(try_stack.finally_ret_addr);
+    
+    if (useJsr())
+      {
+        Type ret_addr_type = Type.objectType;
+        try_stack.finally_ret_addr = addLocal(ret_addr_type);
+        pushType(ret_addr_type);
+        emitStore(try_stack.finally_ret_addr);
+      }
+    else
+      {
+        // Stack contents at the start of the finally block:
+        // an integer exit code, but only if (exitCases != null).
+        // a Throwable or null
+      }
   }
 
   public void emitFinallyEnd()
   {
-    emitRet(try_stack.finally_ret_addr);
-    setUnreachable();
+    if (! reachableHere())
+      try_stack.end_label = null;
+    else if (useJsr())
+      emitRet(try_stack.finally_ret_addr);
+    else if (try_stack.end_label == null && try_stack.exitCases == null)
+      {
+        emitThrow();
+      }
+    else
+      {
+        emitStore(try_stack.exception);
+        emitLoad(try_stack.exception);
+        emitIfNotNull();
+        emitLoad(try_stack.exception);
+        emitThrow();
+        emitElse();
+
+        ExitableBlock exit = try_stack.exitCases;
+
+        if (exit != null)
+          {
+            SwitchState sw = startSwitch();
+
+            while (exit != null)
+              {
+                ExitableBlock next = exit.nextCase;
+                exit.nextCase = null;
+                exit.currentTryState = null;
+                TryState nextTry = TryState.outerHandler(try_stack.previous,
+                                                         exit.initialTryState);
+                if (nextTry == exit.initialTryState) // Optimization
+                  {
+                    sw.addCaseGoto(exit.switchCase, this, exit.endLabel);
+                  }
+                else
+                  {
+                    sw.addCase(exit.switchCase, this);
+                    exit.exit(nextTry);
+                  }
+                exit = next;
+              }
+            try_stack.exitCases = null;
+
+            sw.addDefault(this);
+            sw.finish(this);
+          }
+        emitFi();
+
+        setUnreachable();
+      }
     popScope();
     try_stack.finally_subr = null;
   }
@@ -1557,23 +2467,34 @@ public class CodeAttr extends Attribute implements AttrContainer
   {
     if (try_stack.finally_subr != null)
       emitFinallyEnd();
-    try_stack.end_label.define(this);
     Variable[] vars = try_stack.savedStack;
-    if (vars != null)
+    if (try_stack.end_label == null)
+      setUnreachable();
+    else
       {
-	for (int i = vars.length;  --i >= 0; )
-	  {
-	    Variable v = vars[i];
-	    if (v != null) {
-	      emitLoad(v);
-	    }
-	  }
+        setTypes(try_stack.start_try.localTypes, Type.typeArray0);
+        try_stack.end_label.define(this);
+        if (vars != null)
+          {
+            for (int i = vars.length;  --i >= 0; )
+              {
+                Variable v = vars[i];
+                if (v != null) {
+                  emitLoad(v);
+                }
+              }
+          }
+        if (try_stack.saved_result != null)
+          emitLoad(try_stack.saved_result);
       }
-    if (try_stack.saved_result != null)
-	emitLoad(try_stack.saved_result);
     if (try_stack.saved_result != null || vars != null)
 	popScope();
     try_stack = try_stack.previous;
+  }
+
+  public final TryState getCurrentTry ()
+  {
+    return try_stack;
   }
 
   public final boolean isInTry()
@@ -1583,10 +2504,20 @@ public class CodeAttr extends Attribute implements AttrContainer
     return try_stack != null;
   }
 
-  /** Compile a tail-call to position 0 of the current procewure.
+  /** Start a new switch statment or expression.
+   * The switch value must have been calculated and left on the stack.
+   */
+  public SwitchState startSwitch ()
+  {
+    SwitchState sw = new SwitchState(this);
+    sw.switchValuePushed(this);
+    return sw;
+  }
+
+  /** Compile a tail-call to position 0 of the current procedure.
    * @param pop_args if true, copy argument registers (except this) from stack.
-   * @param scope Scope whose start we jump back to. */
-  public void emitTailCall (boolean pop_args, Scope scope)
+   * @param start the Label to jump back to. */
+  public void emitTailCall (boolean pop_args, Label start)
   {
     if (pop_args)
       {
@@ -1600,61 +2531,394 @@ public class CodeAttr extends Attribute implements AttrContainer
 	    emitStore(locals.used [arg_slots]);
 	  }
       }
-    reserve(5);
-    int start_pc = scope.start_pc;
-    int delta = start_pc - PC;
-    if (delta < -32768)
-      {
-	put1(200);  // goto_w
-	put4(delta);
-      }
-    else
-      {
-	put1(167); // goto
-	put2(delta);
-      }
-    setUnreachable();
+    emitGoto(start);
   }
 
-  /* Make sure the label with oldest fixup is first in labels. */
-  void reorder_fixups ()
+  /** Compile a tail-call to position 0 of the current procedure.
+   * @param pop_args if true, copy argument registers (except this) from stack.
+   * @param scope Scope whose start we jump back to. */
+  public void emitTailCall (boolean pop_args, Scope scope)
   {
-    Label prev = null;
-    Label cur;
-    Label oldest = null;
-    Label oldest_prev = null;
-    int oldest_fixup = PC+100;
-    for (cur = labels;  cur != null;  cur = cur.next)
+    emitTailCall(pop_args, scope.start);
+  }
+
+    public void processFixups() {
+        if (fixup_count <= 0)
+            return;
+
+        // For each label, set it to its maximum limit, assuming all
+        // fixups causes the code to be expanded.  We need a prepass
+        // for this, since FIXUP_MOVEs can cause code to be reordered.
+        // Also, convert each FIXUP_MOVE_TO_END to FIXUP_MOVE.
+
+        int delta = 0;
+        int instruction_tail = fixup_count;
+        fixupAdd(CodeAttr.FIXUP_MOVE, -1, null);
+
+        /* DEBUGGING
+        if (false) {
+            ClassTypeWriter writer =
+                new ClassTypeWriter(getMethod().getDeclaringClass(),
+                                    System.err, 0);
+            writer.println("processFixups1 for "+getMethod());
+            disAssembleWithFixups(writer);
+            writer.flush();
+        }
+        */
+
+  loop1:
+   for (int i = 0;  ;  )
       {
-	if (cur.fixups != null && cur.fixups[0] < oldest_fixup)
+	int offset = fixup_offsets[i];
+	int kind = offset & 15;
+	offset >>= 4;
+	Label label = fixup_labels[i];
+        // Optimize: TRANSFER L1; ...; L1: GOTO L2
+        // to: TRANSFER L2; ...; L1: GOTO L2
+        // If L1 is a FIXUP_DEFINE_UNREACHABLE then we can delete the GOTO L2
+        // (replace it with a DELETE3), since L1 is never reached.
+        if (kind >= FIXUP_CASE && kind <= FIXUP_TRANSFER2) {
+            int max = fixup_count;
+        goto_to_goto:
+            while (label != null && --max >= 0) {
+                int labpc = fixupOffset(label.first_fixup);
+                for (int def = label.first_fixup+1; ; def++) {
+                    if (def >= fixup_count || labpc != fixupOffset(def)) {
+                        break goto_to_goto;
+                    } else if (fixupKind(def) == FIXUP_GOTO
+                               || fixupKind(def) == FIXUP_DELETE3) {
+                        label = fixup_labels[def];
+                        fixup_labels[i] = label;
+                        break;
+                    }
+                }
+            }
+        }
+	switch (kind)
 	  {
-	    oldest = cur;
-	    oldest_prev = prev;
-	    oldest_fixup = cur.fixups[0];
+	  case FIXUP_TRY:
+            i+=2;
+            break;
+	  case FIXUP_LINE_PC:
+	    i++;
+	  case FIXUP_CASE:
+	  case FIXUP_DELETE3:
+	    break;
+          case FIXUP_DEFINE_UNREACHABLE:
+              // If we're currently "unreachable" and we see
+              //    L0: L1: ... Ln: GOTO Lg
+              // then we can delete the "GOTO Lg" because we also (separately)
+              // patch each use of Li to Lg.
+              while (i + 1 < fixup_count && fixupKind(i+1) == FIXUP_DEFINE
+                     && fixupOffset(i+1) == offset) {
+                  i++;
+                  label.position += delta;
+                  label = fixup_labels[i];
+              }
+              if (i + 1 < fixup_count && fixupKind(i+1) == FIXUP_GOTO
+                  && fixupOffset(i+1) == offset) {
+                  for (int j = i; ; j--) {
+                      fixup_labels[j].needsStackMapEntry = false;
+                      if (fixupKind(j) == FIXUP_DEFINE_UNREACHABLE)
+                          break;
+                  }
+                  i++;
+                  fixupSet(i, FIXUP_DELETE3, offset);
+                  delta -= 3;
+                  continue;
+              }
+              // fall through
+	  case FIXUP_DEFINE:
+	    label.position += delta;
+	    break;
+	  case FIXUP_SWITCH:
+	    delta += 3;  // May need to add up to 3 padding bytes.
+	    break;
+	  case FIXUP_GOTO:
+            if (fixupOffset(label.first_fixup) == offset + 3)
+	      {
+		// Optimize: GOTO L; L:
+                fixupSet(i, FIXUP_DELETE3, offset);
+		delta -= 3;
+		break;
+	      }
+	    // ... else fall through ...
+	  case FIXUP_JSR:
+	    if (PC >= 0x8000)
+	      delta += 2;  // May need to convert goto->goto_w, jsr->jsr_w.
+	    break;
+	  case FIXUP_TRANSFER:
+	    if (PC >= 0x8000)
+	      delta += 5;  // May need to add a goto_w.
+	    break;
+	  case FIXUP_MOVE_TO_END:
+	    fixup_labels[instruction_tail] = fixup_labels[i+1];
+	    instruction_tail = offset;
+	    // ... fall through ...
+	  case FIXUP_MOVE:
+            int cur_pc = ((i+1) >= fixup_count ? PC
+                          : fixupOffset(fixup_labels[i+1].first_fixup));
+            fixupSet(i, FIXUP_MOVE, cur_pc);
+	    if (label == null)
+	      break loop1;
+	    else
+	      {
+		i = label.first_fixup;
+		int next_pc = fixupOffset(i);
+		delta = (cur_pc + delta) - next_pc;
+		continue;
+	      }
+	  default:
+	    throw new Error("unexpected fixup");
 	  }
-	prev = cur;
+	i++;
       }
-    if (oldest != labels && oldest != null)
+    // Next a loop to fix the position of each label, and calculate
+    // the exact number of code bytes.
+
+    // Number of bytes to be inserted or (if negative) removed, so far.
+    int new_size = PC;
+    // Current delta between final PC and offset in generated code array.
+    delta = 0;
+  loop2:
+    for (int i = 0;  i < fixup_count;  )
       {
-	oldest_prev.next = oldest.next;
-	oldest.next = labels;
-	labels = oldest;
+	int offset = fixup_offsets[i];
+	int kind = offset & 15;
+	Label label = fixup_labels[i];
+	if (label != null && label.position < 0)
+	  throw new Error ("undefined label "+label);
+        offset = offset >> 4;
+	switch (kind)
+	  {
+	  case FIXUP_TRY:
+            i+=2;
+            fixup_labels[i].position = offset + delta;
+            break;
+	  case FIXUP_LINE_PC:
+	    i++;
+	  case FIXUP_CASE:
+	    break;
+	  case FIXUP_DELETE3:
+	    delta -= 3;
+	    new_size -= 3;
+	    break;
+          case FIXUP_DEFINE_UNREACHABLE:
+	  case FIXUP_DEFINE:
+	    label.position = offset + delta;
+	    break;
+	  case FIXUP_SWITCH:
+	    int padding = 3 - (offset+delta) & 3;
+	    delta += padding;
+	    new_size += padding;
+	    break;
+	  case FIXUP_GOTO:
+	  case FIXUP_JSR:
+	  case FIXUP_TRANSFER:
+	    int rel = label.position - (offset+delta);
+	    if ((short) rel == rel)
+	      {
+                fixupSet(i, FIXUP_TRANSFER2, offset);
+	      }
+	    else
+	      {
+		delta += kind == FIXUP_TRANSFER ? 5 : 2;  // need goto_w
+		new_size += kind == FIXUP_TRANSFER ? 5 : 2;  // need goto_w
+	      }
+	    break;
+	  case FIXUP_MOVE:
+	    if (label == null)
+	      break loop2;
+	    else
+	      {
+		i = label.first_fixup;
+		int next_pc = fixupOffset(i);
+		delta = (offset + delta) - next_pc;
+		continue;
+	      }
+	  default:
+	    throw new Error("unexpected fixup");
+	  }
+	i++;
       }
+
+    /* DEBUGGING
+    if (false) {
+        ClassTypeWriter writer =
+            new ClassTypeWriter(getMethod().getDeclaringClass(), System.err, 0);
+        writer.println("processFixups3 for "+getMethod());
+        disAssembleWithFixups(writer);
+        writer.flush();
+    }
+    */
+
+    byte[] new_code = new byte[new_size];
+    int prev_linenumber = -1;
+    int new_pc = 0;
+    int next_fixup_index = 0;
+    int next_fixup_offset = fixupOffset(0);
+    int oldPC = -1;
+    Label pendingStackMapLabel = null;
+  loop3:
+    for (int old_pc = 0;  ;  )
+      {
+	if (old_pc < next_fixup_offset)
+          new_code[new_pc++] = code[old_pc++];
+	else
+	  {
+	    int kind = fixup_offsets[next_fixup_index] & 15;
+	    Label label = fixup_labels[next_fixup_index];
+            if (pendingStackMapLabel != null
+                && pendingStackMapLabel.position < new_pc)
+              {
+                stackMap.emitStackMapEntry(pendingStackMapLabel, this);
+                pendingStackMapLabel = null;
+              }
+            if (pendingStackMapLabel != null
+                && pendingStackMapLabel.position > new_pc)
+              throw new Error("labels out of order");
+	    switch (kind)
+	      {
+	      case FIXUP_DEFINE:
+              case FIXUP_DEFINE_UNREACHABLE:
+                  if (stackMap != null && label != null && label.isUsed() && label.needsStackMapEntry)
+                  {
+                    pendingStackMapLabel
+                      = mergeLabels(pendingStackMapLabel, label);
+                  }
+		break;
+	      case FIXUP_DELETE3:
+		old_pc += 3;
+		break;
+	      case FIXUP_TRANSFER2:
+		delta = label.position - new_pc;
+		new_code[new_pc++] = code[old_pc];
+		new_code[new_pc++] = (byte) (delta >> 8);
+		new_code[new_pc++] = (byte) (delta & 0xFF);
+		old_pc += 3;
+		break;
+	      case FIXUP_GOTO:
+	      case FIXUP_JSR:
+	      case FIXUP_TRANSFER:
+		delta = label.position - new_pc;
+		byte opcode = code[old_pc];
+		if (kind == FIXUP_TRANSFER)
+		  {
+		    // convert: IF_xxx L to IF_NOT_xxx Lt; GOTO L; Lt:
+		    opcode = invert_opcode(opcode);
+		    new_code[new_pc++] = opcode;
+		    new_code[new_pc++] = 0;
+		    new_code[new_pc++] = 8;  // 8 byte offset to Lt.
+		    opcode = (byte) 200;  // goto_w
+		  }
+		else
+		  {
+		    // Change goto to goto_w; jsr to jsr_w:
+		    opcode = (byte) (opcode + (200-167));
+		  }
+		new_code[new_pc++] = opcode;
+		new_code[new_pc++] = (byte) (delta >> 24);
+		new_code[new_pc++] = (byte) (delta >> 16);
+		new_code[new_pc++] = (byte) (delta >> 8);
+		new_code[new_pc++] = (byte) (delta & 0xFF);
+		old_pc += 3;
+		break;
+	      case FIXUP_SWITCH:
+		int padding = 3 - new_pc & 3;
+		int switch_start = new_pc;
+		new_code[new_pc++] = code[old_pc++];
+		while (--padding >= 0)
+		  new_code[new_pc++] = 0;
+		while (next_fixup_index < fixup_count
+		       && fixupKind(next_fixup_index + 1) == FIXUP_CASE)
+		  {
+		    next_fixup_index++;
+		    int offset = fixupOffset(next_fixup_index);
+		    while (old_pc < offset)
+		      new_code[new_pc++] = code[old_pc++];
+		    delta = (fixup_labels[next_fixup_index].position
+			     - switch_start);
+		    new_code[new_pc++] = (byte) (delta >> 24);
+		    new_code[new_pc++] = (byte) (delta >> 16);
+		    new_code[new_pc++] = (byte) (delta >> 8);
+		    new_code[new_pc++] = (byte) (delta & 0xFF);
+		    old_pc += 4;
+		  }
+		break;
+	      case FIXUP_TRY:
+                label = fixup_labels[next_fixup_index+2];
+                int handler_type_index = fixupOffset(next_fixup_index+1);
+                if (stackMap != null)
+                  pendingStackMapLabel
+                    = mergeLabels(pendingStackMapLabel, label);
+		addHandler(fixup_labels[next_fixup_index].position,
+			   fixup_labels[next_fixup_index+1].position,
+			   new_pc,
+			   handler_type_index);
+		next_fixup_index+=2;
+		break;
+	      case FIXUP_LINE_PC:
+		if (lines == null)
+		  lines = new LineNumbersAttr(this);
+		next_fixup_index++;
+                int linenumber = fixupOffset(next_fixup_index);
+                if (linenumber != prev_linenumber)
+                  lines.put(linenumber, new_pc);
+                prev_linenumber = linenumber;
+		break;
+	      case FIXUP_MOVE:
+		if (label == null)
+		  break loop3;
+		else
+		  {
+		    next_fixup_index = label.first_fixup;
+		    old_pc = fixupOffset(next_fixup_index);
+		    next_fixup_offset = old_pc;
+		    if (label.position != new_pc)
+		      throw new Error("bad pc");
+		    continue;
+		  }
+	      default:
+		throw new Error("unexpected fixup");
+	      }
+	    next_fixup_index++;
+	    next_fixup_offset = fixupOffset(next_fixup_index);
+	  }
+      }
+    if (new_size != new_pc)
+      throw new Error("PC confusion new_pc:"+new_pc+" new_size:"+new_size);
+    PC = new_size;
+    code = new_code;
+    fixup_count = 0;
+    fixup_labels = null;
+    fixup_offsets = null;
   }
 
-  public void finalize_labels ()
+  private Label mergeLabels (Label oldLabel, Label newLabel)
   {
-    while (labels != null && labels.fixups != null)
-      labels.emit_spring (this);
-    for (Label label = labels;  label != null;  label = label.next)
-      {
-	if (label.fixups != null || label.wide_fixups != null)
-	  throw new Error ("undefined label");
-    }
+    if (oldLabel != null)
+      newLabel.setTypes(oldLabel);
+    return newLabel;
   }
 
   public void assignConstants (ClassType cl)
   {
+    if (locals != null && locals.container == null && ! locals.isEmpty())
+      locals.addToFrontOf(this);
+    processFixups();
+    if (stackMap != null && stackMap.numEntries > 0)
+      stackMap.addToFrontOf(this);
+    if (instructionLineMode)
+      {
+        // A kludge to low-level debugging:
+        // Define a "line number" for each instrction.
+        if (lines == null)
+          lines = new LineNumbersAttr(this);
+        lines.linenumber_count = 0;
+        int codeLen = getCodeLength();
+        for (int i = 0;  i < codeLen;  i++)
+          lines.put(i, i);
+      }
     super.assignConstants(cl);
     Attribute.assignConstants(this, cl);
   }
@@ -1728,10 +2992,97 @@ public class CodeAttr extends Attribute implements AttrContainer
     dst.printAttributes(this);
   }
 
-  public void disAssemble (ClassTypeWriter dst, int offset, int length)
+    /* DEBUGGING:
+    public void disAssembleWithFixups(ClassTypeWriter dst) {
+        if (fixup_count <= 0) {
+            disAssemble(dst, 0, PC);
+            return;
+        }
+        int prev_pc = 0;
+        for (int i = 0;  i < fixup_count; ) {
+            int offset = fixup_offsets[i];
+            int kind = offset & 15;
+            Label label = fixup_labels[i];
+            offset = offset >> 4;
+            int pc = offset;
+            if (kind == FIXUP_MOVE || kind == FIXUP_MOVE_TO_END)
+                pc = (i+1 >= fixup_count) ? PC : fixup_offsets[i+1] >> 4;
+            else if (kind == FIXUP_CASE)
+                pc = prev_pc;
+            disAssemble(dst, prev_pc, pc);
+
+            dst.print("fixup#");  dst.print(i);
+            dst.print(" @");  dst.print(offset);
+            prev_pc = pc;
+            switch (kind) {
+            case FIXUP_DEFINE:
+            case FIXUP_DEFINE_UNREACHABLE:
+                dst.print(" DEFINE ");
+                if (kind == FIXUP_DEFINE_UNREACHABLE)
+                    dst.print("(unreachable) ");
+                dst.println(label);
+                break;
+            case FIXUP_SWITCH:
+                dst.println(" SWITCH");
+                break;
+            case FIXUP_CASE:
+                dst.print(" CASE ");
+                dst.println(label);
+                break;
+            case FIXUP_GOTO:
+                dst.print(" GOTO ");
+                dst.println(label);
+                break;
+            case FIXUP_TRANSFER:
+                dst.print(" TRANSFER ");
+                dst.println(label);
+                break;
+            case FIXUP_TRANSFER2:
+                dst.print(" TRANSFER2 ");
+                dst.println(label);
+                break;
+            case FIXUP_DELETE3:
+                dst.println(" DELETE3");
+                break;
+            case FIXUP_MOVE:
+                dst.print(" MOVE ");
+                dst.println(label);
+                break;
+            case FIXUP_MOVE_TO_END:
+                dst.print(" MOVE_TO_END ");
+                dst.println(label);
+                break;
+            case FIXUP_TRY:
+                dst.print(" TRY start: ");
+                dst.println(label);
+                i++;
+                dst.print(" - end: ");
+                dst.print(fixup_labels[i]);
+                dst.print(" type: ");
+                dst.println(fixup_offsets[i] >> 4);
+                i++;
+                dst.print(" - handler: ");
+                dst.println(fixup_labels[i]);
+                break;
+            case FIXUP_LINE_PC:
+                dst.print(" LINE ");
+                i++;
+                dst.println(fixup_offsets[i] >> 4);
+                break;
+            default:
+                dst.println(" kind:"+fixupKind(i)+" offset:"+fixupOffset(i)
+                            +" "+fixup_labels[i]);
+            }
+            i++;
+        }
+        disAssemble(dst, prev_pc, PC);
+    }
+    */
+
+  public void disAssemble (ClassTypeWriter dst, int start, int limit)
   {
     boolean wide = false;
-    for (int i = offset;  i < length; )
+    for (int i = start;  i < limit; )
       {
 	int oldpc = i++;
 	int op = code[oldpc] & 0xff;
@@ -1868,7 +3219,7 @@ public class CodeAttr extends Attribute implements AttrContainer
 		  {
 		    int index;
 		    dst.print("ret ");
-		    if (wide) { index = readUnsignedShort(i); index += 2; }
+		    if (wide) { index = readUnsignedShort(i); i += 2; }
 		    else { index = code[i] & 0xff; i++; }
 		    wide = false;
 		    dst.print(index);
@@ -1878,7 +3229,8 @@ public class CodeAttr extends Attribute implements AttrContainer
 	      {
 		if (op < 172) //  [tableswitch] or [lookupswitch]
 		  {
-		    i = (i + 3) & ~3; // skip 0-3 byte padding.
+		    if (fixup_count <= 0)
+		      i = (i + 3) & ~3; // skip 0-3 byte padding.
 		    int code_offset = readInt(i);  i += 4;
 		    if (op == 170)
 		      {
@@ -1936,6 +3288,13 @@ public class CodeAttr extends Attribute implements AttrContainer
 		    int args = 0xff & code[i];
 		    i += 2;
 		    dst.print(args + " args)");
+		    dst.printConstantOperand(index);
+		  }
+		else if (op == 186) // invokedynamic
+		  {
+		    dst.print("invokedynamic");
+		    int index = readUnsignedShort(i);
+		    i += 4;
 		    dst.printConstantOperand(index);
 		  }
 		else if (op < 196)
@@ -2035,56 +3394,29 @@ public class CodeAttr extends Attribute implements AttrContainer
     dst.write(str, last, pos-last);
   }
 
-  /** Return an object encapsulating the type state of the JVM stack. */
-  public Type[] saveStackTypeState(boolean clear)
+  public int beginFragment (Label after)
   {
-    if (SP == 0)
-      return null;
-    Type[] typeState = new Type[SP];
-    System.arraycopy(stack_types, 0, typeState, 0, SP);
-    if (clear)
-      SP = 0;
-    return typeState;
+    return beginFragment(new Label(), after);
   }
 
-  /** Restore a type state as saved by saveStackTypeState. */
-  public void restoreStackTypeState (Type[] save)
+  public int beginFragment (Label start, Label after)
   {
-    if (save == null)
-      SP = 0;
-    else
-      {
-	SP = save.length;
-	System.arraycopy(save, 0, stack_types, 0, SP);
-      }
+    int i = fixup_count;
+    fixupAdd(FIXUP_MOVE_TO_END, after);
+    start.define(this);
+    return i;
   }
 
-  CodeFragment fragmentStack = null;
-
-  public void beginFragment(boolean isHandler)
+  /** End a fragment.
+   * @param cookie the return value from the previous beginFragment.
+   */
+  public void endFragment (int cookie)
   {
-    CodeFragment frag = new CodeFragment(this);
-    frag.next = fragmentStack;
-    fragmentStack = frag;
-    frag.length = PC;
-    frag.unreachable_save = unreachable_here;
-    unreachable_here = false;
-    if (isHandler)
-      frag.handlerIndex = exception_table_length - 1;
-  }
-
-  public void endFragment()
-  {
-    CodeFragment frag = fragmentStack;
-    fragmentStack = frag.next;
-
-    frag.next = fragments;
-    fragments = frag;
-    int startPC = frag.length;
-    frag.length = PC - startPC;
-    frag.insns = new byte[frag.length];
-    System.arraycopy(code, startPC, frag.insns, 0, frag.length);
-    PC = startPC;
-    unreachable_here = frag.unreachable_save;
+    fixupSet(cookie, FIXUP_MOVE_TO_END, fixup_count);
+    Label after = fixup_labels[cookie];
+    fixupAdd(FIXUP_MOVE, -1, null);
+    after.define(this);
+    int fx = fixup_count - 1;
+    fixupSet(fx, FIXUP_DEFINE, fixupOffset(fx));
   }
 }

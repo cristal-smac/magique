@@ -1,11 +1,10 @@
-// Copyright (c) 1997  Per M.A. Bothner.
+// Copyright (c) 1997, 2004, 2008  Per M.A. Bothner.
 // This is free software;  for terms and warranty disclaimer see ./COPYING.
 
 package gnu.bytecode;
 import java.io.InputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
-import java.io.FileInputStream;
 
 /** Class to read a ClassType from a DataInputStream (.class file).
  * @author Per Bothner
@@ -43,7 +42,7 @@ public class ClassFileInput extends DataInputStream
        throws IOException, ClassFormatError
   {
     ClassType ctype = new ClassType();
-    ClassFileInput reader = new ClassFileInput(ctype, str);
+    new ClassFileInput(ctype, str);
     return ctype;
   }
 
@@ -52,9 +51,15 @@ public class ClassFileInput extends DataInputStream
     int magic = readInt();
     if (magic != 0xcafebabe)
       return false;
-    short minor_version = readShort();
-    short major_version = readShort();
+    readFormatVersion();
     return true;
+  }
+
+  public void readFormatVersion () throws IOException
+  {
+    int minor = readUnsignedShort();
+    int major = readUnsignedShort();
+    ctype.classfileFormatVersion = major * 0x10000 + minor;
   }
 
   public ConstantPool readConstants () throws IOException
@@ -69,8 +74,7 @@ public class ClassFileInput extends DataInputStream
     String name;
 
     ctype.thisClassIndex = readUnsignedShort();
-    clas = (CpoolClass) ctype.constants.getForced(ctype.thisClassIndex,
-						  ConstantPool.CLASS);
+    clas = getClassConstant(ctype.thisClassIndex);
     name = clas.name.string;
     ctype.this_name = name.replace('/', '.');
     ctype.setSignature("L"+name+";");
@@ -80,8 +84,7 @@ public class ClassFileInput extends DataInputStream
       ctype.setSuper((ClassType) null);
     else
       {
-	clas = (CpoolClass) ctype.constants.getForced(ctype.superClassIndex,
-						      ConstantPool.CLASS);
+	clas = getClassConstant(ctype.superClassIndex);
 	name = clas.name.string;
 	ctype.setSuper(name.replace('/', '.'));
       }
@@ -175,6 +178,7 @@ public class ClassFileInput extends DataInputStream
     else if (name == "Code" && container instanceof Method)
       {
         CodeAttr code = new CodeAttr((Method) container);
+        code.fixup_count = -1;
 	code.setMaxStack(readUnsignedShort());
 	code.setMaxLocals(readUnsignedShort());
 	int code_len = readInt();
@@ -205,24 +209,70 @@ public class ClassFileInput extends DataInputStream
       }
     else if (name == "LocalVariableTable" && container instanceof CodeAttr)
       {
-	LocalVarsAttr attr = new LocalVarsAttr((CodeAttr) container);
+	CodeAttr code = (CodeAttr) container;
+	LocalVarsAttr attr = new LocalVarsAttr(code);
 	Method method = attr.getMethod();
 	if (attr.parameter_scope == null)
 	  attr.parameter_scope = method.pushScope();
 	Scope scope = attr.parameter_scope;
+	if (scope.end == null)
+	  scope.end = new Label(code.PC);
 	ConstantPool constants = method.getConstants();
         int count = readUnsignedShort();
+	int prev_start = scope.start.position;
+	int prev_end = scope.end.position;
 	for (int i = 0;  i < count;  i++)
 	  {
 	    Variable var = new Variable();
+	    int start_pc = readUnsignedShort();
+	    int end_pc = start_pc + readUnsignedShort();
+
+	    if (start_pc != prev_start || end_pc != prev_end)
+	      {
+		while (scope.parent != null
+		       && (start_pc < scope.start.position
+			   || end_pc > scope.end.position))
+		  scope = scope.parent;
+		Scope parent = scope;
+		scope = new Scope(new Label(start_pc), new Label(end_pc));
+		scope.linkChild(parent);
+		prev_start = start_pc;
+		prev_end = end_pc;
+	      }
 	    scope.addVariable(var);
-	    var.start_pc = readUnsignedShort();
-	    var.end_pc = var.start_pc + readUnsignedShort();
 	    var.setName(readUnsignedShort(), constants);
 	    var.setSignature(readUnsignedShort(), constants);
 	    var.offset = readUnsignedShort();
 	  }
 	return attr;
+      }
+    else if (name == "Signature" && container instanceof Member)
+      {
+	return new SignatureAttr(readUnsignedShort(), (Member) container);
+      }
+    else if (name == "StackMapTable" && container instanceof CodeAttr)
+      {
+        byte[] data = new byte[length];
+        readFully(data, 0, length);
+        return new StackMapTableAttr(data, (CodeAttr) container);
+      }
+    else if ((name == "RuntimeVisibleAnnotations"
+              || name == "RuntimeInvisibleAnnotations")
+             && (container instanceof Field
+                 || container instanceof Method
+                 || container instanceof ClassType))
+      {
+        int numEntries = readUnsignedShort();
+        AnnotationEntry[] entries = new AnnotationEntry[numEntries];
+        for (int i = 0;  i < numEntries; i++)
+          {
+            entries[i] = RuntimeAnnotationsAttr.readAnnotationEntry(this, container.getConstants());
+          }
+        return new RuntimeAnnotationsAttr(name, entries, numEntries, container);
+      }
+    else if (name == "ConstantValue" && container instanceof Field)
+      {
+	return new ConstantValueAttr(readUnsignedShort());
       }
     else if (name == "InnerClasses" && container instanceof ClassType)
       {
@@ -234,6 +284,12 @@ public class ClassFileInput extends DataInputStream
 	  }
 	return new InnerClassesAttr(data, (ClassType) container);
      }
+    else if (name == "EnclosingMethod" && container instanceof ClassType)
+      {
+        int class_index = readUnsignedShort();
+        int method_index = readUnsignedShort();
+	return new EnclosingMethodAttr(class_index, method_index, (ClassType) container);
+     }
     else if (name == "Exceptions" && container instanceof Method)
       {
 	Method meth = (Method)container;
@@ -243,6 +299,21 @@ public class ClassFileInput extends DataInputStream
 	  exn_indices[i] = readShort();
         meth.setExceptions(exn_indices);
 	return meth.getExceptionAttr();
+      }
+    else if (name == "SourceDebugExtension" && container instanceof ClassType)
+      {
+	SourceDebugExtAttr attr
+	  = new SourceDebugExtAttr((ClassType) container);
+	byte[] data = new byte[length];
+	readFully(data, 0, length);
+	attr.data = data;
+	attr.dlength = length;
+	return attr;
+      }
+    else if (name == "AnnotationDefault" && container instanceof Method)
+      {
+        AnnotationEntry.Value value = RuntimeAnnotationsAttr.readAnnotationValue(this, container.getConstants());
+        return new AnnotationDefaultAttr(name, value, container);
       }
     else
       {
@@ -272,7 +343,6 @@ public class ClassFileInput extends DataInputStream
   public void readMethods () throws IOException
   {
     int nMethods = readUnsignedShort();
-    ConstantPool constants = ctype.constants;
     for (int i = 0;  i < nMethods;  i++)
       {
 	int flags = readUnsignedShort();
@@ -283,5 +353,10 @@ public class ClassFileInput extends DataInputStream
 	meth.setSignature(descriptorIndex);
 	readAttributes(meth);
       }
+  }
+
+  CpoolClass getClassConstant (int index)
+  {
+    return (CpoolClass) ctype.constants.getForced(index, ConstantPool.CLASS);
   }
 }

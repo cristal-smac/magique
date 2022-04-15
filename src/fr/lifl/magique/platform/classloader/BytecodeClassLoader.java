@@ -1,6 +1,9 @@
 package fr.lifl.magique.platform.classloader;
 
-import java.io.*;
+import javassist.NotFoundException;
+import javassist.bytecode.BadBytecode;
+
+import java.io.IOException;
 import java.net.*;
 import java.util.*;
 
@@ -138,7 +141,13 @@ public class BytecodeClassLoader extends ClassLoader {
 			}
 			else {
 				//    		System.out.println("We got ClassArchive 1 : "+ca);
-				Hashtable h = (new ClassDependancy(myLibrary, packageList)).getDependantClasses(className);
+				try {
+					Hashtable h = (new ClassDependancy(myLibrary, packageList)).getDependantClasses(className);
+				} catch (NotFoundException | BadBytecode e) {
+					e.printStackTrace();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
 				//				System.out.println("We got ClassArchive 2 : "+ca);
 
 				//		    System.out.println("***              "+classname);
@@ -164,11 +173,12 @@ public class BytecodeClassLoader extends ClassLoader {
 		List l = new ArrayList();
 		l.add("fr/lifl/magique/platform/classloader");
 		l.add("bsh");
-		l.add("at/dms");
+		l.add("javassist");
 		l.add("gnu/bytecode");
 		l.add("java");
 		l.add("org/omg");
 		l.add("sun");
+		l.add("jdk");
 		return l;
 	}
 	public void addPathToExclude(String packagePrefix) {

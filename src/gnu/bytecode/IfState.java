@@ -2,7 +2,6 @@
 // This is free software;  for terms and warranty disclaimer see ./COPYING.
 
 package gnu.bytecode;
-import java.io.*;
 
 /** The state of a conditional expression or statement. */
 
@@ -19,18 +18,18 @@ public class IfState {
    * otherwise, it is the end of the "then" clause. */
   Label end_label;
 
-  /** The stack size before the "then" clause. */
-  int start_stack_size;
-
-  /** The types that were pushed by the then-clause. */
-  Type[] then_stacked_types;
+  boolean andThenSet;
 
   public IfState (CodeAttr code)
   {
+    this(code, new Label(code));
+  }
+
+  public IfState (CodeAttr code, Label endLabel)
+  {
     previous = code.if_stack;
     code.if_stack = this;
-    end_label = new Label(code);
-    start_stack_size = code.SP;
+    end_label = endLabel;
   }
 }
 

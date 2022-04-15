@@ -1,33 +1,45 @@
-// Copyright (c) 1997  Per M.A. Bothner.
+// Copyright (c) 1997, 2008  Per M.A. Bothner.
 // This is free software;  for terms and warranty disclaimer see ./COPYING.
 
 package gnu.bytecode;
-import java.io.PrintWriter;
-import java.io.PrintStream;
+import java.io.*;
 
 /** This class prints out in contents of a ClassType in human-readable form.
  * The output format matches my earlier jcf-dump program (in gcc/java).
- * This class is not complete - for example it needs a dis-assembler.
- * @author Per Bothner <bothner@cygnus>
+ * @author Per Bothner
  */
 
 public class ClassTypeWriter extends PrintWriter
 {
   ClassType ctype;
   int flags;
-  boolean printConstants = true;
 
-  public ClassTypeWriter (ClassType ctype, PrintWriter stream, int flags)
+  /** Flag to print constant pool. */
+  public static final int PRINT_CONSTANT_POOL = 1;
+  /** Flag to print constant pool indexes. */
+  public static final int PRINT_CONSTANT_POOL_INDEXES = 2;
+  /** Flag to print classfile version  numbers. */
+  public static final int PRINT_VERSION = 4;
+  public static final int PRINT_EXTRAS = 8;
+  public static final int PRINT_VERBOSE =
+    PRINT_CONSTANT_POOL|PRINT_CONSTANT_POOL_INDEXES|PRINT_EXTRAS|PRINT_VERSION;
+
+  public ClassTypeWriter (ClassType ctype, Writer stream, int flags)
   {
     super(stream);
     this.ctype = ctype;
     this.flags = flags;
   }
 
-  public ClassTypeWriter (ClassType ctype, PrintStream stream, int flags)
+  public ClassTypeWriter (ClassType ctype, OutputStream stream, int flags)
   {
     super(stream);
     this.ctype = ctype;
+    this.flags = flags;
+  }
+
+  public void setFlags (int flags)
+  {
     this.flags = flags;
   }
 
@@ -47,28 +59,58 @@ public class ClassTypeWriter extends PrintWriter
 
   public void print ()
   {
-    if (printConstants)
+    if ((flags & PRINT_VERSION) != 0)
+      {
+        print("Classfile format major version: ");
+        print(ctype.getClassfileMajorVersion());
+        print(", minor version: ");
+        print(ctype.getClassfileMinorVersion());
+        println('.');
+      }
+    if ((flags & PRINT_CONSTANT_POOL) != 0)
       printConstantPool();
     printClassInfo();
     printFields();
     printMethods();
+    printAttributes();
+  }
+
+  public void setClass (ClassType ctype)
+  {
+    this.ctype = ctype;
+  }
+
+  public void print (ClassType ctype)
+  {
+    this.ctype = ctype;
+    print();
+  }
+
+  public void printAttributes ()
+  {
+    AttrContainer attrs = ctype;
+    println();
+    print("Attributes (count: ");
+    print(Attribute.count(attrs));
+    println("):");
+    printAttributes (attrs);
   }
 
   public void printAttributes (AttrContainer container)
   {
     for (Attribute attr = container.getAttributes();
-	 attr != null;  attr = attr.next)
+	 attr != null;  attr = attr.getNext())
       {
 	attr.print(this);
       }
   }
 
-  void printClassInfo ()
+  public void printClassInfo ()
   {
     println();
     print("Access flags:");
     int modifiers = ctype.getModifiers();
-    print(Access.toString(modifiers));
+    print(Access.toString(modifiers, 'C'));
     println();
     print("This class: ");
     printOptionalIndex(ctype.thisClassIndex);
@@ -100,7 +142,7 @@ public class ClassTypeWriter extends PrintWriter
       }
   }
 
-  public final void printFields ()
+  public void printFields ()
   {
     println();
     print("Fields (count: ");
@@ -115,17 +157,17 @@ public class ClassTypeWriter extends PrintWriter
 	if (field.name_index != 0)
 	  printOptionalIndex(field.name_index);
 	print(field.getName());
-	print(Access.toString(field.flags));
+	print(Access.toString(field.flags, 'F'));
 	print(" Signature: ");
 	if (field.signature_index != 0)
 	  printOptionalIndex(field.signature_index);
-	printSignature(field.type);
+	printSignature(field.getType());
 	println();
 	printAttributes(field);
       }
   }
 
-  void printMethods()
+  public void printMethods()
   {
     println();
     print("Methods (count: ");
@@ -134,7 +176,11 @@ public class ClassTypeWriter extends PrintWriter
     println();
     Method method = ctype.methods;
     for (; method != null; method = method.next)
-      {
+      printMethod(method);
+  }
+
+  public void printMethod (Method method)
+  {
 	println();
 	print("Method name:");
 	if (method.name_index != 0)
@@ -142,7 +188,7 @@ public class ClassTypeWriter extends PrintWriter
 	print('\"');
 	print(method.getName());
 	print('\"');
-	print(Access.toString(method.access_flags));
+	print(Access.toString(method.access_flags, 'M'));
 	print(" Signature: ");
 	if (method.signature_index != 0)
 	  printOptionalIndex(method.signature_index);
@@ -157,15 +203,20 @@ public class ClassTypeWriter extends PrintWriter
 	printSignature(method.return_type);
 	println();
 	printAttributes(method);
-      }
   }
 
-  final void printConstantTersely(int index, int expected_tag)
+  CpoolEntry getCpoolEntry (int index)
   {
     CpoolEntry[] pool = ctype.constants.pool;
-    CpoolEntry entry;
-    if (pool == null || index < 0 || index >= pool.length
-	|| (entry = pool[index]) == null)
+    if (pool == null || index < 0 || index >= pool.length)
+      return null;
+    else
+      return pool[index];
+  }
+
+  final void printConstantTersely(CpoolEntry entry, int expected_tag)
+  {
+    if (entry == null)
       print("<invalid constant index>");
     else if (entry.getTag() != expected_tag)
       {
@@ -177,16 +228,28 @@ public class ClassTypeWriter extends PrintWriter
       entry.print(this, 0);
   }
 
+  final void printConstantTersely(int index, int expected_tag)
+  {
+    printConstantTersely(getCpoolEntry(index), expected_tag);
+  }
+
+  final void printContantUtf8AsClass(int type_index)
+  {
+    CpoolEntry entry = getCpoolEntry(type_index);
+    if (entry != null && entry.getTag() == ConstantPool.UTF8)
+      {
+        String name = ((CpoolUtf8) entry).string;
+        Type.printSignature(name, 0, name.length(), this);
+      }
+    else
+      printConstantTersely(type_index, ConstantPool.UTF8);
+  }
+
   /** Print constant pool index for dis-assembler. */
   final void printConstantOperand(int index)
   {
     print(' ');
-    if (printConstants)
-      {
-	print('#');
-	print(index);
-	print('=');
-      }
+    printOptionalIndex(index);
     CpoolEntry[] pool = ctype.constants.pool;
     CpoolEntry entry;
     if (pool == null || index < 0 || index >= pool.length
@@ -200,7 +263,30 @@ public class ClassTypeWriter extends PrintWriter
       }
   }
 
-  public final void printConstantPool ()
+  public final void printQuotedString (String string)
+  {
+    print('\"');
+    int len = string.length();
+    for (int i = 0;  i < len;  i++)
+      {
+	char ch = string.charAt(i);
+	if (ch == '\"')
+	  print("\\\"");
+	else if (ch >= ' ' && ch < 127)
+	  print(ch);
+	else if (ch == '\n')
+	  print("\\n");
+	else
+	  {
+	    print("\\u");
+	    for (int j = 4;  --j >= 0; )
+	      print(Character.forDigit((ch >> (j * 4)) & 15, 16));
+	  }
+      }
+    print('\"');
+  }
+
+  public void printConstantPool ()
   {
     CpoolEntry[] pool = ctype.constants.pool;
     int length = ctype.constants.count;
@@ -219,8 +305,9 @@ public class ClassTypeWriter extends PrintWriter
 
   public final void printOptionalIndex(int index)
   {
-    if (printConstants)
+    if (index >= 0 && (flags & PRINT_CONSTANT_POOL_INDEXES) != 0)
       {
+	print('#');
 	print(index);
 	print('=');
       }
@@ -367,5 +454,11 @@ public class ClassTypeWriter extends PrintWriter
       print("<unknown type>");
     else
       printSignature(type.getSignature());
+  }
+
+  public void printSpaces (int count)
+  {
+    while (--count >= 0)
+      print(' ');
   }
 }

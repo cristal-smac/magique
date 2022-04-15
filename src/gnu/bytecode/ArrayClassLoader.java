@@ -1,4 +1,7 @@
 package gnu.bytecode;
+import java.util.Hashtable;
+import java.net.URL;
+import java.io.*;
 
 /** Load classes from a set of byte arrays.
  * @author	Per Bothner
@@ -6,104 +9,146 @@ package gnu.bytecode;
 
 public class ArrayClassLoader extends ClassLoader
 {
-  /** The raw byte arrays from which we will load the classes.
-   * Each element is suitable for defineClass. */
-  byte[][] classBytes;
+  /** Map String to union(byte[], ClassType). */
+  Hashtable map = new Hashtable(100);
+  /** Map String to Class. */
+  Hashtable cmap = new Hashtable(100);
 
-  /** Number of classes managed by this loader. */
-  int size;
+  /** If non-null, context to use for finding resources. */
+  URL context;
 
-  /** Classes that we have already loaded. */
-  Class[] loadedClasses;
+  public ArrayClassLoader ()
+  {
+  }
 
-  String[] classNames;
+  public ArrayClassLoader (ClassLoader parent)
+  {
+    super(parent);
+  }
+
+  /** Get base URL to use for finding resources, or null if none is set. */
+  public URL getResourceContext () { return context; }
+
+  /** Set base URL to use for finding resources. */
+  public void setResourceContext (URL context) { this.context = context; }
 
   /** Load classes from the given byte arrays.
-    By convention, the classes we manage are named "lambda"+<INTEGER>. */
+   * By convention, the classes we manage are named
+   * {@code "lambda"+<INTEGER>}.
+   */
   public ArrayClassLoader (byte[][] classBytes)
   {
-    this.classBytes = classBytes;
-    size = classBytes.length;
-    loadedClasses = new Class [size];
-    classNames = new String [size];
-    for (int i = 0;  i < size;  i++)
-      classNames[i] = "lambda" + i;
+    for (int i = classBytes.length;  --i >= 0; )
+      addClass("lambda" + i, classBytes[i]);
   }
 
   public ArrayClassLoader (String[] classNames, byte[][] classBytes)
   {
-    this.classBytes = classBytes;
-    size = classBytes.length;
-    loadedClasses = new Class [size];
-    this.classNames = classNames;
+    for (int i = classBytes.length;  --i >= 0; )
+      addClass(classNames[i], classBytes[i]);
   }
 
-  private void reserve(int count)
+  public void addClass(Class clas)
   {
-    if (count <= 0)
-      return;
-    int newLength = size < count ? size + count : 2 * size;
-    if (loadedClasses == null)
-      loadedClasses = new Class[newLength];
-    else if (size + count > loadedClasses.length)
-      {
-        Class[] loadedClassesNew = new Class[newLength];
-        System.arraycopy(loadedClasses, 0, loadedClassesNew, 0, size);
-        loadedClasses = loadedClassesNew;
-      }
-    if (classBytes == null)
-      classBytes = new byte[newLength][];
-    else if (size + count > classBytes.length)
-      {
-        byte[][] classBytesNew = new byte[newLength][];
-        System.arraycopy(classBytes, 0, classBytesNew, 0, size);
-        classBytes = classBytesNew;
-      }
-    if (classNames == null)
-      classNames = new String[newLength];
-    else if (size + count > classNames.length)
-      {
-        String[] classNamesNew = new String[newLength];
-        System.arraycopy(classNames, 0, classNamesNew, 0, size);
-        classNames = classNamesNew;
-      }
+    cmap.put(clas.getName(), clas);
   }
 
   public void addClass(String name, byte[] bytes)
   {
-    reserve(1);
-    classNames[size] = name == null ? ("lambda"+size) : name;
-    classBytes[size] = bytes;
-    size++;
+    map.put(name, bytes);
+  }
+
+  public void addClass (ClassType ctype)
+  {
+    map.put(ctype.getName(), ctype);
+  }
+
+  public InputStream getResourceAsStream(String name)
+  {
+    InputStream in = super.getResourceAsStream(name);
+    if (in == null && name.endsWith(".class"))
+      {
+        String cname = name.substring(0, name.length()-6).replace('/', '.');
+        Object r = map.get(cname);
+        if (r instanceof byte[])
+          return new ByteArrayInputStream((byte[]) r);
+      }
+    return in;
+  }
+
+  protected URL findResource(String name)
+  {
+    if (context != null)
+      {
+        try
+          {
+            URL url = new URL(context, name);
+            url.openConnection().connect();
+            return url;
+          }
+        catch (Exception ex)
+          {
+            // Fall through ...
+          }
+      }
+    return super.findResource(name);
   }
 
   public Class loadClass (String name, boolean resolve)
-       throws ClassNotFoundException
+    throws ClassNotFoundException
   {
-    Class clas;
-    for (int index = 0; ; index++)
-      {
-	if (index >= size)
-	  {
-	    clas = findSystemClass (name);
-	    break;
-	  }
-	else if (name.equals (classNames[index]))
-	  { 
-	    clas = loadedClasses[index];
-	    if (clas == null)
-	      {
-		byte[] bytes = classBytes[index];
-		clas = defineClass (name, bytes, 0, bytes.length);
-		loadedClasses[index] = clas;
-		classBytes[index] = null;  // To help garbage collector.
-	      }
-            break;
-	  }
-      }
-
+    Class clas = loadClass(name);
     if (resolve)
-      resolveClass (clas);
+      resolveClass(clas);
     return clas;
   }
+
+    /** Load named class.
+     * Note we deliberately don't follow the Java2 delegation model,
+     * in order to allow classes to be overridden and replaced.
+     * Specifically, we depend on this for the "session class-loader".
+     */
+    public Class loadClass (String name)
+        throws ClassNotFoundException {
+        Object r = cmap.get(name);
+        if (r != null)
+            return (Class) r;
+        synchronized (this) {
+            r = map.get(name);
+            if (r instanceof ClassType) {
+                ClassType ctype = (ClassType) r;
+                if (ctype.isExisting())
+                    r = ctype.reflectClass;
+                else
+                    r = ctype.writeToArray();
+            }
+            if (r instanceof byte[]) {
+                byte[] bytes = (byte[]) r;
+                Class clas = defineClass(name, bytes, 0, bytes.length);
+                cmap.put(name, clas);
+                return clas;
+            }
+            else if (r == null)
+                return getParent().loadClass(name);
+            else
+                return (Class) r;
+        }
+    }
+
+  /* #ifdef JAVA2 */
+  public static Package getContextPackage (String cname)
+  {
+    ClassLoader loader;
+    try
+      {
+        loader = Thread.currentThread().getContextClassLoader();
+        if (loader instanceof ArrayClassLoader)
+          return ((ArrayClassLoader) loader).getPackage(cname);
+      }
+    catch (java.lang.SecurityException ex)
+      {
+      }
+    return Package.getPackage(cname);
+  }
+  /* #endif */
 }
