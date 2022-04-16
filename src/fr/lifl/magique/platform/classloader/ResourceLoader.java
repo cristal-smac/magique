@@ -10,10 +10,8 @@
 
 package fr.lifl.magique.platform.classloader;
 
-import java.util.Enumeration; 
 
 import java.io.InputStream;
-import java.io.ByteArrayInputStream;
 import java.util.StringTokenizer;
 import java.util.NoSuchElementException;
 import java.net.URL;

@@ -11,10 +11,6 @@
 
 package fr.lifl.magique.platform.classloader;
 
-import fr.lifl.magique.platform.Platform;
-import java.lang.reflect.Method;
-import fr.lifl.magique.util.ClassUtil;
-
 public class StartPlatform {
 
    private int port;

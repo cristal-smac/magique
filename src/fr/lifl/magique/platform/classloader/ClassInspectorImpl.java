@@ -12,9 +12,6 @@ import java.io.*;
 import java.util.*;
 import java.util.function.Predicate;
 
-//import at.dms.classfile.*;
-
-
 /**
  * This class is the default implementation of the ClassInspector interface.
  * It relies on the API for bytecode manipulation of KOPI (kjc)

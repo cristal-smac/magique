@@ -8,8 +8,6 @@
 
 package fr.lifl.magique.platform.classloader;
 
-import java.util.Enumeration;
-
 import java.io.InputStream;
 import java.io.IOException;
 import java.util.Hashtable;

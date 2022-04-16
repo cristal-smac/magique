@@ -11,6 +11,10 @@
 
 package fr.lifl.magique.platform.classloader;
 
+import javassist.ClassPool;
+import javassist.CtClass;
+import javassist.bytecode.ClassFile;
+
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
@@ -18,12 +22,11 @@ import java.io.InputStream;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.Serializable;
-import java.io.IOException;
 import java.util.Vector;
 import java.net.URL;
 
-import gnu.bytecode.ClassType;
-import gnu.bytecode.ClassFileInput;
+//import gnu.bytecode.ClassType;
+//import gnu.bytecode.ClassFileInput;
 
 public class ClassArchive implements Serializable {
 
@@ -53,7 +56,7 @@ public class ClassArchive implements Serializable {
    protected Byte[] bytecode;
    // The ClassType of the current bytecode : an intermediate format which
    // encapsulate an array of bytes in an object
-   transient protected ClassType classType;
+   transient protected CtClass ctClass;
    // The name of java class : hello
    protected String className;
    // This Vector is used to keep references on dependant classes. Thus during
@@ -71,7 +74,7 @@ public class ClassArchive implements Serializable {
     */
    public ClassArchive(String fileName, ClassLibrary classLibrary) throws ClassNotFoundException {
       bytecode = null;
-      classType = null;
+      ctClass = null;
       className = null;
       login = System.getProperty("user.name");
       dependencies = new Vector();
@@ -142,23 +145,21 @@ public class ClassArchive implements Serializable {
 
    // Return an exception if the bytecode has not yet benn loaded
    private void loadClassType() throws IOException {
-      ClassFileInput firstClass;
       try {
          InputStream in = new ByteArrayInputStream(getBytecode());
-         firstClass = new ClassFileInput(in);
-         classType = firstClass.readClassType(in);
+         ctClass = ClassPool.getDefault().makeClass(in);
       } catch (IOException e) {
          e.printStackTrace();
       }
    }
 
-   public ClassType getClassType() throws IOException {
-      return classType;
+   public ClassFile getClassFile() throws IOException {
+      return ctClass.getClassFile();
    }
 
    public String getClassName() throws IOException {
       if (className == null) {
-         this.className = classType.getName();
+         this.className = ctClass.getName();
       }
       return className;
    }
@@ -184,7 +185,7 @@ public class ClassArchive implements Serializable {
       stream.defaultReadObject();
       trace("readObject", "Calling my readObject " + className);
       loadClassType();
-      trace("readObject", "Reconstructiong ClassType : " + getClassType());
+      trace("readObject", "Reconstructiong ClassType : " + getClassFile());
    }
 
    public void flush() {
@@ -193,7 +194,7 @@ public class ClassArchive implements Serializable {
       System.out.println("FileName     : " + fileName);
       System.out.println("User login   : " + login);
       System.out.println("Bytecode[]   : " + bytecode);
-      System.out.println("ClassType    : " + classType);
+      System.out.println("ClassType    : " + ctClass);
       System.out.println("Class name   : " + className);
       System.out.println("ClassLibrary : " + classLibrary);
       System.out.print("Dependencies [" + dependencies.size() + "]: ");
