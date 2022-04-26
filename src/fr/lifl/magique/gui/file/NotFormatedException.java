@@ -1,6 +1,9 @@
 package fr.lifl.magique.gui.file;
-import java.util.*;
-import java.io.*;
+
+import java.io.IOException;
+
 public class NotFormatedException extends IOException {
-	public NotFormatedException (int num,String s) {super("Error line "+num+":"+s);}
+    public NotFormatedException(int num, String s) {
+        super("Error line " + num + ":" + s);
+    }
 }

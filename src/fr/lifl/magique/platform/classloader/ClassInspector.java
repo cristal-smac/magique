@@ -1,35 +1,33 @@
-
 package fr.lifl.magique.platform.classloader;
 
 import javassist.NotFoundException;
 import javassist.bytecode.BadBytecode;
 
-public interface ClassInspector
-{
+public interface ClassInspector {
 
-    public String getClassName();
-    
-    public boolean hasASuperClassOtherThanObject() throws NotFoundException;
-    
-    public String getSuperClassName() throws NotFoundException;
-    
-    public boolean hasInterfaces() throws NotFoundException;
-    
-    public String[] getInterfacesNames() throws NotFoundException;
+    String getClassName();
 
-    public String[] getAllReferencedClasses() throws NotFoundException, BadBytecode;
+    boolean hasASuperClassOtherThanObject() throws NotFoundException;
 
-    public boolean hasInnerClasses() throws NotFoundException;
+    String getSuperClassName() throws NotFoundException;
 
-    public String[] getInnerClassesNames() throws NotFoundException;
+    boolean hasInterfaces() throws NotFoundException;
 
-    public boolean hasFields();
+    String[] getInterfacesNames() throws NotFoundException;
 
-    public String[] getFieldsClassesNames();
+    String[] getAllReferencedClasses() throws NotFoundException, BadBytecode;
 
-    public boolean hasMethods();
+    boolean hasInnerClasses() throws NotFoundException;
 
-    public String[] getClassesNamesInsideMethods() throws NotFoundException, BadBytecode;
+    String[] getInnerClassesNames() throws NotFoundException;
+
+    boolean hasFields();
+
+    String[] getFieldsClassesNames();
+
+    boolean hasMethods();
+
+    String[] getClassesNamesInsideMethods() throws NotFoundException, BadBytecode;
 
     // We should had a method like the following to warn the user
     // We just have to look if we inherit from classloader or if

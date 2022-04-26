@@ -13,31 +13,32 @@
 
 package fr.lifl.magique.gui.file;
 
-import java.io.*;
+import java.io.File;
+import java.io.FilenameFilter;
 
 /**
  * A class that permits to get only the subdirectories of a directory
  *
- * @version 1.0 04/05/99
  * @author Nadir Doghmane
  * @author Fabien Niquet
+ * @version 1.0 04/05/99
  */
 
-public class	DirectoryFilter	implements FilenameFilter	{
-		
-	/**
-	 * Return	true if	the	file's a directory
-	 * and false if	it isn't.
-	 *
-	 * @see	FilenameFilter#accept
-	 */
-	public boolean accept(File dir,	String name) {
-		File absname;
-		if ( dir.toString().endsWith(System.getProperty("file.separator")) )
-			absname	=	new	File(dir.toString()+name);
-		else
-			absname	=	new	File(dir.toString()+System.getProperty("file.separator")+name);
-		return ( absname.isDirectory() );
-		}
-	
+public class DirectoryFilter implements FilenameFilter {
+
+    /**
+     * Return	true if	the	file's a directory
+     * and false if	it isn't.
+     *
+     * @see    FilenameFilter#accept
+     */
+    public boolean accept(File dir, String name) {
+        File absname;
+        if (dir.toString().endsWith(System.getProperty("file.separator")))
+            absname = new File(dir + name);
+        else
+            absname = new File(dir + System.getProperty("file.separator") + name);
+        return (absname.isDirectory());
+    }
+
 }

@@ -1,7 +1,7 @@
 /**
  * Skill.java
- *
- *
+ * <p>
+ * <p>
  * Created: Mon Nov 22 14:41:52 1999
  *
  * @author Jean-Christophe Routier

@@ -12,28 +12,31 @@
  */
 
 package fr.lifl.magique.gui.network;
-import fr.lifl.magique.gui.descriptor.*;
-import fr.lifl.magique.platform.*;
 
-import java.util.*;
-import java.net.*;
-import java.io.*;
+import fr.lifl.magique.gui.descriptor.LinkToDaemon;
+import fr.lifl.magique.platform.Platform;
+
+import java.util.Enumeration;
+import java.util.Hashtable;
 
 
 class NetworkTest extends Thread {
     Hashtable computers;
     Hashtable resultat;
     Platform platform;
-    public NetworkTest (Hashtable computers,Hashtable resultat,Platform platform) {
-	this.platform = platform;
-	this.computers=computers;this.resultat=resultat;
+
+    public NetworkTest(Hashtable computers, Hashtable resultat, Platform platform) {
+        this.platform = platform;
+        this.computers = computers;
+        this.resultat = resultat;
     }
-    public void run () {
-	for (Enumeration e=computers.elements();e.hasMoreElements();){
-	    LinkToDaemon link=(LinkToDaemon) e.nextElement();
-	    String key=link.getName();
-	    String computer=link.getComputer();
-	    	   
+
+    public void run() {
+        for (Enumeration e = computers.elements(); e.hasMoreElements(); ) {
+            LinkToDaemon link = (LinkToDaemon) e.nextElement();
+            String key = link.getName();
+            String computer = link.getComputer();
+
 //  	    Boolean res = Boolean.FALSE;
 //  	    try {
 //  		java.lang.reflect.Method m  = fr.lifl.magique.util.ClassUtil.getMethod(platform.getClass(),
@@ -44,15 +47,15 @@ class NetworkTest extends Thread {
 //  	    catch (Exception exc) {
 //  		exc.printStackTrace();
 //  	    }
-	    Boolean res = platform.ping(computer);
+            Boolean res = platform.ping(computer);
 
-	    synchronized(resultat) {
-		resultat.remove(key);
-		if (res.booleanValue()) 
-		    resultat.put(key,computer);
-	    }
-	}
- 
+            synchronized (resultat) {
+                resultat.remove(key);
+                if (res.booleanValue())
+                    resultat.put(key, computer);
+            }
+        }
+
     }
 }
 

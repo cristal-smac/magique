@@ -1,7 +1,7 @@
 /**
  * MagiqueMain.java
- *
- *
+ * <p>
+ * <p>
  * Created: Tue Feb 20 09:59:53 2001
  *
  * @author Jean-Christophe Routier
@@ -9,8 +9,8 @@
  */
 package fr.lifl.magique;
 
-public interface MagiqueMain  {
+public interface MagiqueMain {
 
-    public void theRealmain(String[] args);
-    
+    void theRealmain(String[] args);
+
 } // MagiqueMain

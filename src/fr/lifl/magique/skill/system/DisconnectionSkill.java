@@ -1,7 +1,7 @@
 /**
  * DisconnectionSkill.java
- *
- *
+ * <p>
+ * <p>
  * Created: Fri Oct 29 16:18:13 1999
  *
  * @author Jean-Christophe Routier
@@ -9,20 +9,20 @@
  */
 package fr.lifl.magique.skill.system;
 
-import fr.lifl.magique.*;
-import fr.lifl.magique.skill.*;
-import fr.lifl.magique.util.*;
+import fr.lifl.magique.Agent;
+import fr.lifl.magique.AtomicAgent;
+import fr.lifl.magique.skill.DefaultSkill;
 
-import java.util.*;
+import java.util.Enumeration;
 
 /** Skills with ability for disconnection between agent
  *
  * @see fr.lifl.magique.skill.system.ConnectionSkill
-*/
+ */
 public class DisconnectionSkill extends DefaultSkill {
 
     public DisconnectionSkill(AtomicAgent myAgent) {
-	super(myAgent);
+        super(myAgent);
     }
 
     /** disconnects me from another agent : disconnection is safe in the
@@ -35,45 +35,44 @@ public class DisconnectionSkill extends DefaultSkill {
      * @param theOther name of the agent i disconnect from
      * @see fr.lifl.magique.Agent#connectTo
      *  */
-    public Boolean askForDisconnectionFrom(String theOther) {	
-	Agent.verbose(3,getName()+" askForDisconnectionFrom "+theOther); 
-	theOther = getMyAgent().getAgenda().getFullName(theOther);
-	askNow(theOther,"acknowledgeDisconnection",getName());	
-	perform(theOther,"removeFromAgenda",getName() , Boolean.TRUE);
-	// pause to be sure "theOther" has removed me from its agenda
-	// asKnow can not be used since, I disappear from agend and
-	// then answer can not comme back... an I would become blocked
-	try {
-	    Thread.sleep(100); 
-	}
-	catch (Exception e) {
-	    e.printStackTrace();
-	}
+    public Boolean askForDisconnectionFrom(String theOther) {
+        Agent.verbose(3, getName() + " askForDisconnectionFrom " + theOther);
+        theOther = getMyAgent().getAgenda().getFullName(theOther);
+        askNow(theOther, "acknowledgeDisconnection", getName());
+        perform(theOther, "removeFromAgenda", getName(), Boolean.TRUE);
+        // pause to be sure "theOther" has removed me from its agenda
+        // asKnow can not be used since, I disappear from agent and
+        // then answer can not comme back... and I would become blocked
+        try {
+            Thread.sleep(100);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
-	disconnect(theOther);
-	return Boolean.TRUE;
+        disconnect(theOther);
+        return Boolean.TRUE;
     }
 
-    
+
     /** disconect from everyone */
     public void disconnectFromAll() {
-	// disconnection from other acquaintances
-	for(Enumeration known = getAgenda().keys();known.hasMoreElements();) {
-	    String name = (String) known.nextElement();
-	    askNow("askForDisconnectionFrom",new Object[]{name});
-	}
+        // disconnection from other acquaintances
+        for (Enumeration known = getAgenda().keys(); known.hasMoreElements(); ) {
+            String name = (String) known.nextElement();
+            askNow("askForDisconnectionFrom", new Object[]{name});
+        }
     }
 
     /** remove <em>theOther</em> from my agenda (due to a disconnection).
-     * 
+     *
      * @param theOther name of the agent to remove from my agenda
      * @param flag not used here
      */
-    public void removeFromAgenda(String theOther, 
-				 Boolean flag) {
-	Agent.verbose(3,getName()+" remove "+ theOther+" from agenda");	
-	getMyAgent().getAgenda().removeAgent(theOther);
-	// i must update my team info
+    public void removeFromAgenda(String theOther,
+                                 Boolean flag) {
+        Agent.verbose(3, getName() + " remove " + theOther + " from agenda");
+        getMyAgent().getAgenda().removeAgent(theOther);
+        // i must update my team info
     }
 
     /** performed by an agent when another agent (<em>theOther</em>)
@@ -84,20 +83,19 @@ public class DisconnectionSkill extends DefaultSkill {
      * safe disconnection 
      */
     public Boolean acknowledgeDisconnection(String theOther) {
-	Agent.verbose(3,getName()+ " acknowledge disconnection "+ theOther); 
-	return Boolean.TRUE;
+        Agent.verbose(3, getName() + " acknowledge disconnection " + theOther);
+        return Boolean.TRUE;
     }
- 
+
     /** finishes the disconnection : theOther isremoved from my agenda
      * and cancalcomm is closed
      *
      * @param theOther name of the agent i disconnect from */
     private void disconnect(String theOther) {
-	removeFromAgenda(theOther, Boolean.FALSE);
-	Agent.verbose(3,getName()+ " disconnection from "+ theOther+" done"); 
+        removeFromAgenda(theOther, Boolean.FALSE);
+        Agent.verbose(3, getName() + " disconnection from " + theOther + " done");
     }
 
-    
 
 } // DisconnectionSkill.java
  

@@ -1,15 +1,15 @@
-
 /**
  * DisplaySkill.java
- *
- *
+ * <p>
+ * <p>
  * Created: Fri Nov 05 08:29:16 1999
  *
  * @author Jean-Christophe Routier
  * @version
  */
 package fr.lifl.magique.skill.system;
-import fr.lifl.magique.*;
+
+import fr.lifl.magique.Skill;
 
 /** this is the default display method used by an agent 
  */
@@ -19,7 +19,7 @@ public class DisplaySkill implements Skill {
      * @param message the message to be displayed
      */
     public void display(java.lang.String message) {
-	fr.lifl.magique.AbstractAgent.verbose(-10000,message);
+        fr.lifl.magique.AbstractAgent.verbose(-10000, message);
     }
-    
+
 } // DisplaySkill

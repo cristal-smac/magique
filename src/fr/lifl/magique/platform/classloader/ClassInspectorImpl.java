@@ -1,16 +1,13 @@
-
 package fr.lifl.magique.platform.classloader;
 
 import javassist.*;
 import javassist.bytecode.*;
-import javassist.bytecode.analysis.Analyzer;
-import javassist.bytecode.analysis.Frame;
-import javassist.expr.ExprEditor;
-import javassist.expr.MethodCall;
 
 import java.io.*;
-import java.util.*;
-import java.util.function.Predicate;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.StringTokenizer;
 
 /**
  * This class is the default implementation of the ClassInspector interface.
@@ -24,7 +21,6 @@ public class ClassInspectorImpl implements ClassInspector {
     /**
      *
      */
-    //protected ClassInfo classInfo;
     protected ClassFile classFile;
     protected CtClass ctClass;
 
@@ -33,8 +29,6 @@ public class ClassInspectorImpl implements ClassInspector {
      */
     public ClassInspectorImpl(String filename)
             throws IOException, NotFoundException {
-//  	System.err.println("XXXXXXXXXXXXX "+filename+" XXXXXXXXXXXXX");
-//  	System.err.flush();
         FileInputStream s = new FileInputStream(filename);
         int size = s.available();
         byte[] data = new byte[100000];
@@ -47,7 +41,6 @@ public class ClassInspectorImpl implements ClassInspector {
         s.read(data);
         s.close();
         InputStream is = new ByteArrayInputStream(data, 0, size);
-        //classInfo = new ClassInfo(new DataInputStream(is), false);
         classFile = new ClassFile(new DataInputStream(is));
         ctClass = ClassPool.getDefault().makeClass(is);
         is.close();
@@ -59,8 +52,11 @@ public class ClassInspectorImpl implements ClassInspector {
     public ClassInspectorImpl(InputStream input)
             throws IOException {
         classFile = new ClassFile((DataInputStream) input);
-        ctClass = ClassPool.getDefault().makeClass(input);
-        //classInfo = new ClassInfo(input, false);
+        try {
+            ctClass = ClassPool.getDefault().get(classFile.getName());
+        } catch (NotFoundException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -183,21 +179,17 @@ public class ClassInspectorImpl implements ClassInspector {
         ArrayList signatureClasses = new ArrayList();
         int idx = signature.indexOf(')');
         String parameters = signature.substring(1, idx);
-        //System.out.println("Parameters : "+parameters);
         StringTokenizer tokenizer = new StringTokenizer(parameters, ";");
         while (tokenizer.hasMoreTokens()) {
             String currentClass = tokenizer.nextToken();
             int idxL = currentClass.indexOf('L');
             if (idxL != -1) {
-                //		System.out.println("XXXXXXXXXX    "+ currentClass.substring(idxL+1));
                 signatureClasses.add(replaceSlash(currentClass.substring(idxL + 1))); //7/6/2001 .substring(1, currentClass.length())));
             }
         }
-        String returnType = signature.substring(idx + 1, signature.length());
-        //System.out.println("Return type: "+returnType);
+        String returnType = signature.substring(idx + 1);
         int idxL = returnType.indexOf('L');
         if (idxL != -1) {
-            //		System.out.println("   return  "+ replaceSlash(returnType.substring(idxL, returnType.length()-1)));
             signatureClasses.add(replaceSlash(returnType.substring(idxL + 1, returnType.length() - 1)));
         }
 
@@ -210,12 +202,7 @@ public class ClassInspectorImpl implements ClassInspector {
     public String[] getClassesNamesInsideMethods() throws NotFoundException, BadBytecode {
         CtMethod[] methods = ctClass.getMethods();
         HashMap methodsClasses = new HashMap();
-        //System.out.println("I've "+methods.length+" methds");
         for (int i = 0; i < methods.length; i++) {
-            //	    System.out.println("Method "+i+" : "+methods[i].getName());
-	    /*if (methods[i].getName().equals("<init>") ||
-		methods[i].getName().equals("class$")) continue;*/
-
             // Parsing the signature (return type and parameters)
             ArrayList signatureClasses = parseMethodSignature(methods[i].getSignature());
             Iterator iterator = signatureClasses.iterator();
@@ -223,9 +210,7 @@ public class ClassInspectorImpl implements ClassInspector {
             while (iterator.hasNext()) {
                 signature = (String) iterator.next();
                 if (!signature.equals("")) {
-                    //				System.out.println(" [signature]   "+replaceSlash(signature));
                     methodsClasses.put(replaceSlash(signature), Boolean.TRUE);
-
                 }
             }
 
@@ -245,46 +230,48 @@ public class ClassInspectorImpl implements ClassInspector {
             if (methodInfo != null) {
                 // Parsing the code of the method : any try/catch block ?
 
-                String[] hi = methodInfo.getExceptionsAttribute().getExceptions();
-                if (hi != null)
-                    for (int j = 0; j < hi.length; j++) {
-                        if (hi[j] != null) {
-                            //				System.err.println("Catched exceptions :"+hi[j].getThrown());
-
-                            methodsClasses.put(replaceSlash(hi[j]), Boolean.TRUE);
+                if (methodInfo.getExceptionsAttribute() != null) {
+                    String[] hi = methodInfo.getExceptionsAttribute().getExceptions();
+                    if (hi != null) {
+                        for (int j = 0; j < hi.length; j++) {
+                            if (hi[j] != null) {
+                                methodsClasses.put(replaceSlash(hi[j]), Boolean.TRUE);
+                            }
                         }
                     }
-                //else System.out.println("No try/catch in this method !");
-                //System.out.println();
+                }
+
                 // Parsing the code of the method : any object creation ?
 
-                CodeIterator code = methodInfo.getCodeAttribute().iterator();
-                ConstPool pool = methodInfo.getConstPool();
+                if (methodInfo.getCodeAttribute() != null) {
+                    CodeIterator code = methodInfo.getCodeAttribute().iterator();
+                    ConstPool pool = methodInfo.getConstPool();
 
-                while (code.hasNext()) {
-                    int pos = code.next();
-                    int opcode = code.byteAt(pos);
+                    while (code.hasNext()) {
+                        int pos = code.next();
+                        int opcode = code.byteAt(pos);
 
-                    switch (opcode) {
-                        case Opcode.NEW:
-                            methodsClasses.put(replaceSlash(pool.getClassInfo(code.u16bitAt(pos + 1))), true);
-                            break;
-                        case Opcode.INVOKEINTERFACE:
-                            methodsClasses.put(replaceSlash(pool.getInterfaceMethodrefClassName(code.u16bitAt(pos + 1))), true);
-                            break;
-                        case Opcode.INVOKESPECIAL:
-                        case Opcode.INVOKESTATIC:
-                        case Opcode.INVOKEVIRTUAL:
-                            methodsClasses.put(replaceSlash(pool.getMethodrefClassName(code.u16bitAt(pos + 1))), true);
-                            break;
-                        case Opcode.GETSTATIC:
-                        case Opcode.PUTSTATIC:
-                        case Opcode.GETFIELD:
-                        case Opcode.PUTFIELD:
-                            methodsClasses.put(replaceSlash(pool.getFieldrefClassName(code.u16bitAt(pos + 1))), true);
-                            break;
-                        default:
-                            break;
+                        switch (opcode) {
+                            case Opcode.NEW:
+                                methodsClasses.put(replaceSlash(pool.getClassInfo(code.u16bitAt(pos + 1))), true);
+                                break;
+                            case Opcode.INVOKEINTERFACE:
+                                methodsClasses.put(replaceSlash(pool.getInterfaceMethodrefClassName(code.u16bitAt(pos + 1))), true);
+                                break;
+                            case Opcode.INVOKESPECIAL:
+                            case Opcode.INVOKESTATIC:
+                            case Opcode.INVOKEVIRTUAL:
+                                methodsClasses.put(replaceSlash(pool.getMethodrefClassName(code.u16bitAt(pos + 1))), true);
+                                break;
+                            case Opcode.GETSTATIC:
+                            case Opcode.PUTSTATIC:
+                            case Opcode.GETFIELD:
+                            case Opcode.PUTFIELD:
+                                methodsClasses.put(replaceSlash(pool.getFieldrefClassName(code.u16bitAt(pos + 1))), true);
+                                break;
+                            default:
+                                break;
+                        }
                     }
                 }
             }
@@ -316,14 +303,12 @@ public class ClassInspectorImpl implements ClassInspector {
         HashMap classNames = new HashMap();
         // Does this class has a superclass ?
         if (hasASuperClassOtherThanObject()) {
-            //	    	    System.out.println("   xxxxxxxxxxxx      superC "+getSuperClassName());
             classNames.put(getSuperClassName(), Boolean.TRUE);
         }
         // Does this class implements some interfaces ?
         if (hasInterfaces()) {
             String[] interfaces = getInterfacesNames();
             for (int i = 0; i < interfaces.length; i++) {
-                //				System.out.println("   xxxxxxxxxxxx      interfaces "+interfaces[i]);
                 classNames.put(interfaces[i], Boolean.TRUE);
             }
         }
@@ -331,7 +316,6 @@ public class ClassInspectorImpl implements ClassInspector {
         if (hasInnerClasses()) {
             String[] innerClasses = getInnerClassesNames();
             for (int i = 0; i < innerClasses.length; i++) {
-                //  System.out.println("   xxxxxxxxxxxx      inner "+innerClasses[i]);
                 classNames.put(innerClasses[i], Boolean.TRUE);
             }
         }
@@ -347,7 +331,6 @@ public class ClassInspectorImpl implements ClassInspector {
         if (hasMethods()) {
             String[] methods = getClassesNamesInsideMethods();
             for (int i = 0; i < methods.length; i++) {
-                //				System.out.println("   xxxxxxxxxxxx      method "+methods[i]);
                 classNames.put(methods[i], Boolean.TRUE);
             }
         }
@@ -356,18 +339,9 @@ public class ClassInspectorImpl implements ClassInspector {
         int i = 0;
         while (iterator.hasNext()) {
             String s = (String) iterator.next();
-            //	    System.out.println("   xxxxxxxxxxxx      "+s);
             allClassesNames[i] = s; // 8/6/2001 cleanFieldSignature(s);
-            //System.err.print("!"+allClassesNames[i]+"!");
             i++;
         }
-
-//  	System.out.println("\n **********");
-//  	for(int z = 0; z < allClassesNames.length; z++) {
-//  	    System.out.println(allClassesNames[z]);	    
-//  	}
-//  	System.out.println("********** \n");	
-
         return allClassesNames;
     }
 
@@ -383,12 +357,10 @@ public class ClassInspectorImpl implements ClassInspector {
      */
     protected String cleanFieldSignature(String fieldSignature) {
         // Removes the first and last characters (i.e. "L" ... ";")
-        //    	System.err.println(">>>>"+fieldSignature+"<<<<<");
-//    	System.err.println("****"+getClassName()+"****");
 
         int startIndex = fieldSignature.lastIndexOf('[') == -1 ? 0 : fieldSignature.lastIndexOf('[') + 1;
 
-        fieldSignature = fieldSignature.substring(startIndex, fieldSignature.length());
+        fieldSignature = fieldSignature.substring(startIndex);
 
         if (fieldSignature.startsWith("L")) {
             startIndex = 1;
@@ -400,9 +372,6 @@ public class ClassInspectorImpl implements ClassInspector {
         return fieldSignature.substring(startIndex, fieldSignature.length() - stopIndex);
     }
 
-    /**
-     *
-     */
     /*
     public void dump(ClassInfo ci) {
         System.out.println("Class         : " + ci.getName());

@@ -25,13 +25,8 @@ public class TestImp extends AbstractMagiqueMain {
 	ping.addSkill(new PingSkill(ping));
 	pong.addSkill(new PongSkill(pong));
 
-	chef.start();
-
 	ping.connectToBoss("super");
 	pong.connectToBoss("super");
-
-	ping.start();
-	pong.start();
 
 	chef.perform("ping", 0);
     }

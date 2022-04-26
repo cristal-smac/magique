@@ -16,6 +16,7 @@ La version actuelle de Magique nécessite d'utiliser la version 8 du Java Develo
 
 Cette version doit être téléchargée [sur le site d'Oracle](https://www.oracle.com/java/technologies/javase/javase8-archive-downloads.html), puis installée. Mémorisez le dossier dans lequel vous ferez cette installation. Nous le noterons par la suite `cheminVersJDK18/` (ajouter ce chemin à la variable système `PATH` simplifie l'exécution des commandes qui suivent, puisque cela dispense d'ajouter ce chemin en tête des commandes indiquées).
 
+**Attention**, lors de l'exécution en distribué, vérifiez votre fichier `/etc/hosts` (sur Linux) afin qu'il n'y ait pas d'adresse IP associée avec le nom de votre ordinateur. Auquel cas Magique ne pourra s'exécuter correctement.
 
 ## Exemple simple : Pong
 
