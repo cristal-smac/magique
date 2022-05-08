@@ -70,7 +70,7 @@ public class BytecodeClassLoader extends ClassLoader {
                 || classIsSystem("[L", className, "/")) {
             return super.loadClass(className);
         }
-        Class c = findLoadedClass(className);
+        Class c = findLoadedClass(className.replace('/', '.'));
         if (c != null) {
             return c;
         }
