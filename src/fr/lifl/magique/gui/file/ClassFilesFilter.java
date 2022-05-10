@@ -13,26 +13,27 @@
 
 package fr.lifl.magique.gui.file;
 
-import java.io.*;
+import java.io.File;
+import java.io.FilenameFilter;
 
 /**
  * A class that permits to get only the class files of a directory
  *
- * @version 1.0 04/05/99
  * @author Nadir Doghmane
  * @author Fabien Niquet
+ * @version 1.0 04/05/99
  */
 
-public class	ClassFilesFilter implements	FilenameFilter {
+public class ClassFilesFilter implements FilenameFilter {
 
-	/**
-	 * Return	true if	the	file's extension is	"class"
-	 * and false if	it isn't.
-	 *
-	 * @see	FilenameFilter#accept
-	 */
-	public boolean accept(File dir,	String name) {
-		return (name.toLowerCase().endsWith(".class"));
-	}
+    /**
+     * Return	true if	the	file's extension is	"class"
+     * and false if	it isn't.
+     *
+     * @see    FilenameFilter#accept
+     */
+    public boolean accept(File dir, String name) {
+        return (name.toLowerCase().endsWith(".class"));
+    }
 
 }

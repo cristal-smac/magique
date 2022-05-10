@@ -15,51 +15,40 @@
  * Interface that	can	distribute a multi-agents	system
  * on	a	network	of computers
  *
- * @version	1.2	25/03/99
- * @author DOGHMANE	Nadir	&	NIQUET Fabien
+ * @version 1.2    25/03/99
+ * @author DOGHMANE    Nadir	&	NIQUET Fabien
  */
 package fr.lifl.magique.gui;
-import fr.lifl.magique.gui.theinterface.*;
-import java.io.*;
-import java.net.*;
-import fr.lifl.magique.gui.draw.JProgressFrame;
 
 import fr.lifl.magique.platform.classloader.BytecodeClassLoader;
-import java.lang.reflect.*;
+
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 
 public class LanceurAgents {
-    //    static JProgressFrame progress=new JProgressFrame();
     static Object frame;
-    public static	void main( String[]	args ) {	 
-	
-	//	progress.setVisible(true);
-	
-	//	    if (progress==null) System.out.println("ERREUR");
-	try {	
-	    BytecodeClassLoader myLoader = new BytecodeClassLoader();
-	    Class cl = myLoader.loadClass("fr.lifl.magique.gui.theinterface.MultiAgentsFrame");
-	    Constructor co = cl.getConstructor(new Class[]{Class.forName("java.lang.String")}); //,
-	    //							   Class.forName("fr.lifl.magique.gui.draw.JProgressFrame")});
-	    
-	    frame = co.newInstance(new Object[]{"Magique"});//,progress});
-	    	    
-	    Method m = fr.lifl.magique.util.ClassUtil.getMethod(cl,
-								"setVisiBle",
-								new String[]{"java.lang.Boolean"} );
-	    
-	    Boolean visible = Boolean.TRUE;
-	    if(args.length!=0) {
-		visible = Boolean.FALSE;
-	    }
-	    
-	    m.invoke(frame, new Object[]{visible});
-	}
-	catch(Exception e) {
-	    e.printStackTrace();
-	}
 
-	//	progress.setVisible(false);
-	//progress.dispose();
+    public static void main(String[] args) {
+        try {
+            BytecodeClassLoader myLoader = new BytecodeClassLoader();
+            Class cl = myLoader.loadClass("fr.lifl.magique.gui.theinterface.MultiAgentsFrame");
+            Constructor co = cl.getConstructor(Class.forName("java.lang.String")); //,
+
+            frame = co.newInstance("Magique");//,progress});
+
+            Method m = fr.lifl.magique.util.ClassUtil.getMethod(cl,
+                    "setVisiBle",
+                    new String[]{"java.lang.Boolean"});
+
+            Boolean visible = Boolean.TRUE;
+            if (args.length != 0) {
+                visible = Boolean.FALSE;
+            }
+
+            m.invoke(frame, visible);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }
 

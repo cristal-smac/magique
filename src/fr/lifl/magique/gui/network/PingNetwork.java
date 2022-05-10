@@ -12,37 +12,40 @@
  */
 
 package fr.lifl.magique.gui.network;
-import fr.lifl.magique.platform.*;
-import java.util.*;
-import java.net.*;
-import java.io.*;
+
+import fr.lifl.magique.platform.Platform;
+
+import java.util.Hashtable;
 
 
 public class PingNetwork {
-    private Hashtable Vactif;
+    private final Hashtable Vactif;
     //    private Object platform;
-    private Platform platform;
- 
+    private final Platform platform;
+
     public PingNetwork(Platform p) {
-	super();Vactif=new Hashtable();
-	this.platform=p;
+        super();
+        Vactif = new Hashtable();
+        this.platform = p;
     }
-    
-    public void testNetwork (Hashtable computers) {	
-	new NetworkTest(computers,Vactif,platform).start();
+
+    public void testNetwork(Hashtable computers) {
+        new NetworkTest(computers, Vactif, platform).start();
     }
-    public void reset () {
-	synchronized(Vactif) {
-	    Vactif.clear();	 
-	}
+
+    public void reset() {
+        synchronized (Vactif) {
+            Vactif.clear();
+        }
     }
+
     public int computerState(String S) {
-	//	synchronized(Vactif) {
-	    if (Vactif.containsKey(S)) return 2;   
-	    //	}
+        //	synchronized(Vactif) {
+        if (Vactif.containsKey(S)) return 2;
+        //	}
 	/*	synchronized(Vready) {
 		if (Vready.containsKey(S)) return 2;   
 		}*/
-	return 0;
-    }  
+        return 0;
+    }
 }

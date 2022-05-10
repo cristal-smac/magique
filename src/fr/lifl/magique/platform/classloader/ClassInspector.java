@@ -1,32 +1,33 @@
-
 package fr.lifl.magique.platform.classloader;
 
-public interface ClassInspector
-{
+import javassist.NotFoundException;
+import javassist.bytecode.BadBytecode;
 
-    public String getClassName();
-    
-    public boolean hasASuperClassOtherThanObject();
-    
-    public String getSuperClassName();
-    
-    public boolean hasInterfaces();
-    
-    public String[] getInterfacesNames();
+public interface ClassInspector {
 
-    public String[] getAllReferencedClasses();
+    String getClassName();
 
-    public boolean hasInnerClasses();
+    boolean hasASuperClassOtherThanObject() throws NotFoundException;
 
-    public String[] getInnerClassesNames();
+    String getSuperClassName() throws NotFoundException;
 
-    public boolean hasFields();
+    boolean hasInterfaces() throws NotFoundException;
 
-    public String[] getFieldsClassesNames();
+    String[] getInterfacesNames() throws NotFoundException;
 
-    public boolean hasMethods();
+    String[] getAllReferencedClasses() throws NotFoundException, BadBytecode;
 
-    public String[] getClassesNamesInsideMethods();
+    boolean hasInnerClasses() throws NotFoundException;
+
+    String[] getInnerClassesNames() throws NotFoundException;
+
+    boolean hasFields();
+
+    String[] getFieldsClassesNames();
+
+    boolean hasMethods();
+
+    String[] getClassesNamesInsideMethods() throws NotFoundException, BadBytecode;
 
     // We should had a method like the following to warn the user
     // We just have to look if we inherit from classloader or if
