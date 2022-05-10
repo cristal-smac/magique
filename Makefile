@@ -38,7 +38,6 @@ agent:
 
 platform:
 	cd src ; javac -classpath $(CLASSPATH) fr/lifl/magique/platform/rmi/*.java -d $(CLASSES)
-)
 	cd src ; javac -classpath $(CLASSPATH) fr/lifl/magique/platform/classloader/*.java -d $(CLASSES)
 	cd src ; javac -classpath $(CLASSPATH) fr/lifl/magique/platform/*.java -d $(CLASSES)
 
