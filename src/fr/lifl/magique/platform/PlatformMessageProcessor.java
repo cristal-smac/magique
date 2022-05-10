@@ -1,7 +1,7 @@
 /**
  * PlatformMessageProcessor.java
- *
- *
+ * <p>
+ * <p>
  * Created: Mon Jan 18 18:22:39 1999
  *
  * @author Jean-Christophe Routier
@@ -17,24 +17,24 @@ package fr.lifl.magique.platform;
  * @see java.lang.Runnable
  */
 public class PlatformMessageProcessor implements Runnable {
-    
+
     /* the object that must execute PlatformMessage */
-    private Platform platform;
+    private final Platform platform;
     /* the PlatformMessage to execute */
-    private PlatformMessage platformMessage;
+    private final PlatformMessage platformMessage;
 
     /**
      * @param agent the object that must execute platformMessage
      * @param platformMessage the platformMessage to execute
      */
     public PlatformMessageProcessor(Platform platform, PlatformMessage platformMessage) {
-	this.platform = platform;
-	this.platformMessage = platformMessage;
+        this.platform = platform;
+        this.platformMessage = platformMessage;
     }
-    
+
     /** treats the PlatformMessage */
     public void run() {
-	platform.treatMessage(platformMessage);
+        platform.treatMessage(platformMessage);
     }
-    
+
 } // RequestProcessor

@@ -1,8 +1,7 @@
-
 /**
  * PlatformMessage.java
- *
- *
+ * <p>
+ * <p>
  * Created: Tue Jan 25 10:44:42 2000
  *
  * @author Jean-Christophe Routier
@@ -11,7 +10,6 @@
 package fr.lifl.magique.platform;
 
 import fr.lifl.magique.Message;
-import java.io.*;
 
 /** Specific messages between platforms : a name and a magique message
  *
@@ -20,21 +18,25 @@ import java.io.*;
 
 public class PlatformMessage implements Message {
 
-    private String recipient;
-    private Message content;
+    private final String recipient;
+    private final Message content;
 
     public PlatformMessage(String recipient, Message content) {
-	this.recipient = recipient;
-	this.content = content;
+        this.recipient = recipient;
+        this.content = content;
     }
 
     public String toString() {
-	return "to "+recipient+" content "+content;
+        return "to " + recipient + " content " + content;
     }
 
-    public String getRecipient() { return recipient; }
-    
-    public Message getContent() { return content; }
+    public String getRecipient() {
+        return recipient;
+    }
+
+    public Message getContent() {
+        return content;
+    }
 
 //      private void writeObject(ObjectOutputStream output) throws IOException {
 //  	System.out.println("write "+this);	    

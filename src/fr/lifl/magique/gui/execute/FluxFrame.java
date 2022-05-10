@@ -12,16 +12,14 @@
  */
 
 package fr.lifl.magique.gui.execute;
-import bsh.*;
-import bsh.util.*;
-import java.awt.*;
-import java.awt.event.*;
-import javax.swing.*;
-import javax.swing.event.*;
 
-import java.util.*;
-import java.net.*;
-import java.io.*;
+import bsh.util.JConsole;
+
+import javax.swing.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 
 
 /**
@@ -29,39 +27,43 @@ import java.io.*;
  * It shows all the output of its JVM
  */
 public class FluxFrame extends JFrame {
-  private JTextArea  area = new JTextArea();
-  private JScrollPane bar;
+    private final JTextArea area = new JTextArea();
+    private final JScrollPane bar;
     //  private  JVMInputServer streamServer;
 
 
-  public FluxFrame(JConsole beanconsole) {
-      super("Console Tools");
-      area.setEditable(false);
-      bar = new JScrollPane(area,JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS );
-      area.addMouseListener(new MouseAdapter() {
-	      public void mousePressed(MouseEvent e) {         
-		  if (SwingUtilities.isRightMouseButton(e)) 
-		      area.setText("");
-	      }
-	  });
-      addWindowListener(new WindowAdapter(){
-       public void windowClosing(WindowEvent e) {
-	   setVisible(false);
-       }
-	      public void windowDeiconified(WindowEvent e) {repaint();}
-	  });   
-      
-      getContentPane().add(new JSplitPane(JSplitPane.VERTICAL_SPLIT,bar,beanconsole));
-  }
-    
+    public FluxFrame(JConsole beanconsole) {
+        super("Console Tools");
+        area.setEditable(false);
+        bar = new JScrollPane(area, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS, JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
+        area.addMouseListener(new MouseAdapter() {
+            public void mousePressed(MouseEvent e) {
+                if (SwingUtilities.isRightMouseButton(e))
+                    area.setText("");
+            }
+        });
+        addWindowListener(new WindowAdapter() {
+            public void windowClosing(WindowEvent e) {
+                setVisible(false);
+            }
+
+            public void windowDeiconified(WindowEvent e) {
+                repaint();
+            }
+        });
+
+        getContentPane().add(new JSplitPane(JSplitPane.VERTICAL_SPLIT, bar, beanconsole));
+    }
+
     /**
      * Appends text on this frame
-     * 
+     *
      * @param stream the text to be appended
      */
     public void addText(String stream) {
-	invalidate();     
-	area.append(stream+"\n"); validate();
-    }  
-    
+        invalidate();
+        area.append(stream + "\n");
+        validate();
+    }
+
 }

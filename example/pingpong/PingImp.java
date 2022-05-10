@@ -8,8 +8,7 @@ public class PingImp extends AbstractMagiqueMain {
             Agent.setVerboseLevel(Integer.parseInt(args[1]));
 
         Agent a = createAgent("ping");
-	a.addSkill(new PingSkill(a));
-
+		a.addSkill(new PingSkill(a));
         a.connectToBoss("super@"+args[0]);
     }
 }
