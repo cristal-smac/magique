@@ -3,11 +3,11 @@ import fr.lifl.magique.*;
 
 public class TestPingPong extends AbstractMagiqueMain {
     public void theRealMain(String args[]) {
-        // création des agents par la plate-forme
+        // crÃ©ation des agents par la plate-forme
         Agent ping = createAgent("agentPing");
         Agent pong = createAgent("agentPong");
     
-        // acquisition de leur compétence
+        // acquisition de leur compÃ©tence
         ping.addSkill(new chap2.PingSkill(ping));
         pong.addSkill(new chap2.PongSkill(pong));
 

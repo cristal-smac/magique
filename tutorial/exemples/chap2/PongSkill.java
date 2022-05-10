@@ -6,7 +6,7 @@ public class PongSkill extends MagiqueDefaultSkill {
     
     public void pong() {
        System.out.println("pong");
-       // requête sur la compétence ping de "agentPing"
+       // requÃªte sur la compÃ©tence ping de "agentPing"
        perform("agentPing","ping");
     }  
 } // PongSkill

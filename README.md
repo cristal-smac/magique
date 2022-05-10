@@ -19,7 +19,7 @@ différente de java) à l'aide du fichier `Makefile` fourni à l'aide de
 la commande
 
 ```bash
- >make all
+  make all
 ```
 
 Dans la suite de ce document, on suppose que les fichiers `magique.jar` et `magiqueGui.jar` se trouvent dans le dossier `.../magique/`.
@@ -31,6 +31,8 @@ Les codes se trouvent dans le dossier `.../magique/example/pingpong` (et aussi d
 
 L'exécution des autres exemples reprend les mêmes principes.
 
+Par la suite on suppose que les commandes décrites sont exécutées depuis le dossier `.../magique/example/pingpong/`. 
+
 ### Exécution distribuée dans des terminaux
 
 Voici comment exécuter ce programme en mode distribué, en exécutant les agents impliqués dans trois terminaux différents du même ordinateur.
@@ -38,12 +40,12 @@ Voici comment exécuter ce programme en mode distribué, en exécutant les agent
 Il peut être nécessaire de commencer par compiler les codes fournis
 
 ```bash
-.../magique/example/pingpong> javac -classpath .:../../magique.jar *.java
+ javac -classpath .:../../magique.jar *.java
 ```
 
 (NB : sous windows, il faudra replacer le ":" dans l'option classpath par ";", il est aussi possible qu'il faille mettre des guillemets, ce qui donnerait :
 ```windows
-.../magique/example/pingpong> javac -classpath ".;../../magique.jar" *.java
+ javac -classpath ".;../../magique.jar" *.java
 ```
 )
 
@@ -51,7 +53,7 @@ Il peut être nécessaire de commencer par compiler les codes fournis
 Dans un premier terminal, il faut démarrer l'agent **Superviseur**
 
 ```bash
-.../magique/example/pingpong> java -classpath .:../../magique.jar fr.lifl.magique.Start SuperImp
+ java -classpath .:../../magique.jar fr.lifl.magique.Start SuperImp
 ```
 On obtient la trace :
 ```bash
@@ -74,7 +76,7 @@ Les agents *Ping* et *Pong* étant exécutés sur le même ordinateur, il va fal
 
 Ce qui donne pour chacun *Ping* :
 ```bash
-.../magique/example/pingpong> java -classpath .:../../magique.jar fr.lifl.magique.Start PingImp  5555 192.168.100.001:4444
+ java -classpath .:../../magique.jar fr.lifl.magique.Start PingImp  5555 192.168.100.001:4444
 ```
 et la trace où apparaît les informations de connexion au superviseur
 ```bash
@@ -98,7 +100,7 @@ connection with 192.168.100.001:5555 performed
 Il nous reste à démarrer *Pong* de manière similaire :
 
 ```bash
-.../magique/example/pingpong> java -classpath .:../../magique.jar fr.lifl.magique.Start PongImp 6666 192.168.100.001:4444
+ java -classpath .:../../magique.jar fr.lifl.magique.Start PongImp 6666 192.168.100.001:4444
 ```
 
 On constate alors dans le terminal du superviseur la connexion de l'agent *Pong*, ainsi que dans les terminaux des agents *Ping* et *Ping* l'envoi infini des messages 'ping' et 'pong' entre les deux agents.
@@ -116,13 +118,13 @@ java -classpath .:../../magique.jar fr.lifl.magique.Start PingImp  5555 192.168.
 
 Il faut démarrrer un agent `PlatformLauncher` :
 ```bash
-.../magique/example/pingpong> java -jar magique.jar
+ java -jar magique.jar
 ```
 
 Puis l'interface graphique
 
 ```bash
-.../magique/example/pingpong> java -cp .:../../magiqueGUI.jar fr.lifl.magique.gui.LanceurAgents
+ java -cp .:../../magiqueGUI.jar fr.lifl.magique.gui.LanceurAgents
 ```
 
 Charger la configuration : menu *File* puis *load* : `pingpong.magic`.
