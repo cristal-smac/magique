@@ -33,9 +33,9 @@ L'exécution des autres exemples reprend les mêmes principes.
 
 Par la suite on suppose que les commandes décrites sont exécutées depuis le dossier `.../magique/example/pingpong/`. 
 
-### Exécution distribuée dans des terminaux
+### Exécution non distribuée dans un seul terminal
 
-Voici comment exécuter ce programme en mode distribué, en exécutant les agents impliqués dans trois terminaux différents du même ordinateur.
+Pour vérifier que tout fonctionne correctement, on va exécuter le SMA en plaçant les trois agents au sein de la même plateforme (donc la même JVM), en centralisé.
 
 Il peut être nécessaire de commencer par compiler les codes fournis
 
@@ -47,8 +47,41 @@ Il peut être nécessaire de commencer par compiler les codes fournis
 ```windows
  javac -classpath ".;../../magique.jar" *.java
 ```
-)
 
+Dans un premier terminal, il faut démarrer le SMA et ses trois agents
+
+```bash
+ java -classpath .:../../magique.jar fr.lifl.magique.Start TestImp
+```
+On obtient la trace :
+```bash
+....................................
+ Magique : PlatformAgent created
+..null
+.................>>> bossName : super@134.206.12.150:4444
+>>> bossName : super@134.206.12.150:4444
+ping 0
+pong 1
+ping 2
+pong 3
+ping 4
+pong 5
+ping 6
+pong 7
+(...)
+```
+
+Les agents se répondent par `ping` ou `pong` en alternance et infiniment. Il faut interrompre cela par un superbe `Ctrl+c`.
+
+### Exécution distribuée dans des terminaux
+
+Voici comment exécuter ce programme en mode distribué, en exécutant les agents impliqués dans trois terminaux différents du même ordinateur.
+
+Si cela n'a pas été fait à l'étape précédente, il peut être nécessaire de commencer par compiler les codes fournis
+
+```bash
+ javac -classpath .:../../magique.jar *.java
+```
 
 Dans un premier terminal, il faut démarrer l'agent **Superviseur**
 
@@ -103,9 +136,9 @@ Il nous reste à démarrer *Pong* de manière similaire :
  java -classpath .:../../magique.jar fr.lifl.magique.Start PongImp 6666 192.168.100.001:4444
 ```
 
-On constate alors dans le terminal du superviseur la connexion de l'agent *Pong*, ainsi que dans les terminaux des agents *Ping* et *Ping* l'envoi infini des messages 'ping' et 'pong' entre les deux agents.
+On constate alors dans le terminal du superviseur la connexion de l'agent *Pong*, ainsi que dans les terminaux des agents *Ping* et *Ping* l'envoi infini des messages `ping`  et `pong` entre les deux agents.
 
-Il faut mettre fin à leur partie de ping-pong infinie par `Ctrl C` dans l'un des terminaux.
+Il faut mettre fin à leur partie de ping-pong infinie à nouveauà l'aide de `Ctrl+c` dans l'un des terminaux.
 
 On peut augmenter le niveau de trace pour voir les messages échangés en ajoutant un paramètre à l'exécution. Le niveau de trace va de 0 à 5 :
 ```bash
@@ -118,10 +151,10 @@ java -classpath .:../../magique.jar fr.lifl.magique.Start PingImp  5555 192.168.
 
 Il faut démarrrer un agent `PlatformLauncher` :
 ```bash
- java -jar magique.jar
+ java -jar ../../magique.jar
 ```
 
-Puis l'interface graphique
+Puis l'interface graphique (qu'il convient de passer en plein écran).
 
 ```bash
  java -cp .:../../magiqueGUI.jar fr.lifl.magique.gui.LanceurAgents
@@ -141,7 +174,7 @@ Sélectionnez *Show* puis "Console Tools". Dans la fenêtre qui s'ouvre saisisse
 
 ![exécution](./images/gui-execution.png)
 
-et validez pour observer l'exécution.
+et validez pour observer l'exécution. Il est possible d'interrompre l'exécution à l'aide du menu `kill` de la fenêtre `Exécution`.
 
 
 ## Bilbiographie
