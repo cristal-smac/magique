@@ -74,18 +74,18 @@ et la trace où apparaît les informations de connexion au superviseur
 ....................................
  Magique : PlatformAgent created
 ..null
-................Platform : connect to 134.206.12.150:4444
-134.206.12.150:4444 not yet known
-134.206.12.150:4444 already known
-connection with 134.206.12.150:4444 performed
-ping
+................Platform : connect to 192.168.100.001:4444
+192.168.100.001:4444 not yet known
+192.168.100.001:4444 already known
+connection with 192.168.100.001:4444 performed
+ping 0
 ```
 A la fin de cet affichage on voit apparaitre la trace de l'envoi du premier message `ping` en attente de réponse.
 
 Du côté du *superviseur* on peut constater la trace de connexion de l'agent *Ping* avec l'apparition des messages
 ```bash
-...............134.206.12.150:5555 not yet known
-connection with 134.206.12.150:5555 performed
+...............192.168.100.001:5555 not yet known
+connection with 192.168.100.001:5555 performed
 ```
 
 Il nous reste à démarrer *Pong* de manière similaire :
@@ -107,9 +107,9 @@ cheminVersJDK18/bin/java -classpath .:../../magique18.jar fr.lifl.magique.Start 
 
 ### Exécution avec l'interface graphique
 
-Il faut démarrrer un agent plateforme :
+Il faut démarrrer un agent `PlatformLauncher` :
 ```bash
-.../magique/example/pingpong> cheminVersJDK18/bin/java -classpath .:../../magique18.jar fr.lifl.magique.PlatformLauncher
+.../magique/example/pingpong> java -jar magique18.jar
 ```
 
 Puis l'interface graphique
@@ -120,7 +120,7 @@ Puis l'interface graphique
 
 Charger la configuration : menu *File* puis *load* : `pingpong.magic`.
 
-Editer l'adresse IP de l'ordinateur, puis sélectionner cahque agent puis cliquer sur l'hôte pour mettre à jour l'adresse de l'agent.
+Editer l'adresse IP de l'ordinateur, puis sélectionner chaque agent puis cliquer sur l'hôte pour mettre à jour l'adresse de l'agent.
 
 ![ajuster les adresses IP](./images/gui-computerIP.png)
 
