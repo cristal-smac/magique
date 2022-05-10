@@ -1,6 +1,0 @@
-#!/bin/sh
-
-P=/home/akira/Rage/lib
-CLASSPATH=$P/magique.jar:$P/db4o.jar:$P/rage.jar:.:$CLASSPATH
-export CLASSPATH
-

@@ -1,7 +1,0 @@
-#!/bin/sh
-
-export PATH=/tmp/jdk1.3/bin:$PATH
-P=/home/desstiir/boulangp/Rage/lib
-CLASSPATH=$P/magique.jar:$P/db4o.jar:$P/rage.jar:.:$CLASSPATH
-export CLASSPATH
-
