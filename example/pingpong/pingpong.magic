@@ -1,31 +1,31 @@
-DEFAGENT "Ping"
+DEFAGENT "chef"
   CLASSE "fr.lifl.magique.Agent"
   CLASSPATH ""
   ISCOLLAPSED "false"
-  COMPUTER "134.206.12.150"
-  POSITION 321 105
-  DEFSKILL "PingSkill"     CONSTRUCTOR "public PingSkill(fr.lifl.magique.Agent)"
-     CLASSPATH "E:.jc.java.toy.pingpong."
-     ARG "this"
-   ENDDEF
+  COMPUTER "192.168.100.001"
+  POSITION 435 36
 ENDDEF
 DEFAGENT "Pong"
   CLASSE "fr.lifl.magique.Agent"
   CLASSPATH ""
   ISCOLLAPSED "false"
-  COMPUTER "134.206.12.150"
+  COMPUTER "192.168.100.001"
   POSITION 490 116
   DEFSKILL "PongSkill"     CONSTRUCTOR "public PongSkill(fr.lifl.magique.Agent)"
      CLASSPATH "E:.jc.java.toy.pingpong."
      ARG "this"
    ENDDEF
 ENDDEF
-DEFAGENT "chef"
+DEFAGENT "Ping"
   CLASSE "fr.lifl.magique.Agent"
   CLASSPATH ""
   ISCOLLAPSED "false"
-  COMPUTER "134.206.12.150"
-  POSITION 435 36
+  COMPUTER "192.168.100.001"
+  POSITION 380 116
+  DEFSKILL "PingSkill"     CONSTRUCTOR "public PingSkill(fr.lifl.magique.Agent)"
+     CLASSPATH "E:.jc.java.toy.pingpong."
+     ARG "this"
+   ENDDEF
 ENDDEF
 DEFLINK
   PARENT "chef"

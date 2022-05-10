@@ -149,15 +149,17 @@ java -classpath .:../../magique.jar fr.lifl.magique.Start PingImp  5555 192.168.
 
 ### Exécution avec l'interface graphique
 
+Les commandes suivantes sont exécutées depuis le dossier `.../magique/`;
+
 Il faut démarrrer un agent `PlatformLauncher` :
 ```bash
- java -jar ../../magique.jar
+ java -jar magique.jar
 ```
 
 Puis l'interface graphique (qu'il convient de passer en plein écran).
 
 ```bash
- java -cp .:../../magiqueGUI.jar fr.lifl.magique.gui.LanceurAgents
+ java -cp magiqueGUI.jar fr.lifl.magique.gui.LanceurAgents
 ```
 
 Charger la configuration : menu *File* puis *load* : `pingpong.magic`.
