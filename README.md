@@ -12,11 +12,17 @@ La présentation ci-dessous donne des éléments pour permettre l'exécution d'u
 
 ## Exécution de Magique
 
-La version actuelle de Magique nécessite d'utiliser la version 8 du Java Development Kit.  
+Les fichiers `magique.jar` et `magiqueGui.jar` fournis ont été générés à partir de la version `18.0.1.1`du compilateur java d'Oracle.
 
-Cette version doit être téléchargée [sur le site d'Oracle](https://www.oracle.com/java/technologies/javase/javase8-archive-downloads.html), puis installée. Mémorisez le dossier dans lequel vous ferez cette installation. Nous le noterons par la suite `cheminVersJDK18/` (ajouter ce chemin à la variable système `PATH` simplifie l'exécution des commandes qui suivent, puisque cela dispense d'ajouter ce chemin en tête des commandes indiquées).
+Ils peuvent être reconstruits (éventuellement pour une version
+différente de java) à l'aide du fichier `Makefile` fourni à l'aide de
+la commande
 
-**Attention**, lors de l'exécution en distribué, vérifiez votre fichier `/etc/hosts` (sur Linux) afin qu'il n'y ait pas d'adresse IP associée avec le nom de votre ordinateur. Auquel cas Magique ne pourra s'exécuter correctement.
+```bash
+ >make all
+```
+
+Dans la suite de ce document, on suppose que les fichiers `magique.jar` et `magiqueGui.jar` se trouvent dans le dossier `.../magique/`.
 
 ## Exemple simple : Pong
 
@@ -32,12 +38,12 @@ Voici comment exécuter ce programme en mode distribué, en exécutant les agent
 Il peut être nécessaire de commencer par compiler les codes fournis
 
 ```bash
-.../magique/example/pingpong> cheminVersJDK18/bin/javac -classpath .:../../magique18.jar *.java
+.../magique/example/pingpong> javac -classpath .:../../magique.jar *.java
 ```
 
 (NB : sous windows, il faudra replacer le ":" dans l'option classpath par ";", il est aussi possible qu'il faille mettre des guillemets, ce qui donnerait :
 ```windows
-.../magique/example/pingpong> cheminVersJDK18/bin/javac -classpath ".;../../magique18.jar" *.java
+.../magique/example/pingpong> javac -classpath ".;../../magique.jar" *.java
 ```
 )
 
@@ -45,7 +51,7 @@ Il peut être nécessaire de commencer par compiler les codes fournis
 Dans un premier terminal, il faut démarrer l'agent **Superviseur**
 
 ```bash
-.../magique/example/pingpong> cheminVersJDK18/bin/java -classpath .:../../magique18.jar fr.lifl.magique.Start SuperImp
+.../magique/example/pingpong> java -classpath .:../../magique.jar fr.lifl.magique.Start SuperImp
 ```
 On obtient la trace :
 ```bash
@@ -68,7 +74,7 @@ Les agents *Ping* et *Pong* étant exécutés sur le même ordinateur, il va fal
 
 Ce qui donne pour chacun *Ping* :
 ```bash
-.../magique/example/pingpong> cheminVersJDK18/bin/java -classpath .:../../magique18.jar fr.lifl.magique.Start PingImp  5555 192.168.100.001:4444
+.../magique/example/pingpong> java -classpath .:../../magique.jar fr.lifl.magique.Start PingImp  5555 192.168.100.001:4444
 ```
 et la trace où apparaît les informations de connexion au superviseur
 ```bash
@@ -92,7 +98,7 @@ connection with 192.168.100.001:5555 performed
 Il nous reste à démarrer *Pong* de manière similaire :
 
 ```bash
-.../magique/example/pingpong> cheminVersJDK18/bin/java -classpath .:../../magique18.jar fr.lifl.magique.Start PongImp 6666 192.168.100.001:4444
+.../magique/example/pingpong> java -classpath .:../../magique.jar fr.lifl.magique.Start PongImp 6666 192.168.100.001:4444
 ```
 
 On constate alors dans le terminal du superviseur la connexion de l'agent *Pong*, ainsi que dans les terminaux des agents *Ping* et *Ping* l'envoi infini des messages 'ping' et 'pong' entre les deux agents.
@@ -101,7 +107,7 @@ Il faut mettre fin à leur partie de ping-pong infinie par `Ctrl C` dans l'un de
 
 On peut augmenter le niveau de trace pour voir les messages échangés en ajoutant un paramètre à l'exécution. Le niveau de trace va de 0 à 5 :
 ```bash
-cheminVersJDK18/bin/java -classpath .:../../magique18.jar fr.lifl.magique.Start PingImp  5555 192.168.100.001:4444 5
+java -classpath .:../../magique.jar fr.lifl.magique.Start PingImp  5555 192.168.100.001:4444 5
 ```
 
 (pour le superviseur il devient nécessaire de préciser la valeur du port 4444 avant le niveau de trace).
@@ -110,13 +116,13 @@ cheminVersJDK18/bin/java -classpath .:../../magique18.jar fr.lifl.magique.Start 
 
 Il faut démarrrer un agent `PlatformLauncher` :
 ```bash
-.../magique/example/pingpong> java -jar magique18.jar
+.../magique/example/pingpong> java -jar magique.jar
 ```
 
 Puis l'interface graphique
 
 ```bash
-.../magique/example/pingpong> cheminVersJDK18/bin/java -cp .:../../magiqueGUI-18.jar fr.lifl.magique.gui.LanceurAgents
+.../magique/example/pingpong> java -cp .:../../magiqueGUI.jar fr.lifl.magique.gui.LanceurAgents
 ```
 
 Charger la configuration : menu *File* puis *load* : `pingpong.magic`.
