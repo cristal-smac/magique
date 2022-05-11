@@ -32,7 +32,7 @@ public class AcquaintanceSkill extends MagiqueDefaultSkill {
     }
 
     public Boolean hasAcquaintance(String signature) {
-        return new Boolean(acquaTable.hasAcquaintance(signature));
+        return Boolean.valueOf(acquaTable.hasAcquaintance(signature));
     }
 
     public String getAcquaintance(String signature) {
@@ -40,11 +40,11 @@ public class AcquaintanceSkill extends MagiqueDefaultSkill {
     }
 
     public Boolean isAcquaintanceCreationPossible(String signature, String agent) {
-        return new Boolean(acquaTable.isAcquaintanceCreationPossible(signature, agent));
+        return Boolean.valueOf(acquaTable.isAcquaintanceCreationPossible(signature, agent));
     }
 
     public Boolean isLearningAccurate(String signature, String agent) {
-        return new Boolean(acquaTable.isLearningAccurate(signature, agent));
+        return Boolean.valueOf(acquaTable.isLearningAccurate(signature, agent));
     }
 
     public void createAcquaintance(String signature, String agent) {

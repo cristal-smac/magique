@@ -146,8 +146,7 @@ class CreateAgentThread extends Thread {
                                     params[i - 1] = skillargs.elementAt(i);
                                 }
                                 String from = agent.getName(); //Platform.PLATFORMMAGIQUEAGENTNAME+"@"+this.agent.getPlatform().getName();
-                                this.agent.perform(graph_agent.getName() + "@" + computer, "learnSkill", skill.getClasse(), from, new Boolean("true"), params);
-                                //				this.agent.perform(graph_agent.getName()+"@"+computer,"addASkill",skill.getClasse(),new Boolean("true"),params);
+                                this.agent.perform(graph_agent.getName() + "@" + computer, "learnSkill", skill.getClasse(), from, Boolean.TRUE, params);
                             }
                         } else {               //pas defaultSkill !!!
                             params = new Object[skillargs.size() - 1];
@@ -155,8 +154,7 @@ class CreateAgentThread extends Thread {
                                 params[i] = skillargs.elementAt(i);
                             }
                             String from = agent.getName(); //Platform.PLATFORMMAGIQUEAGENTNAME+"@"+this.agent.getPlatform().getName();
-                            this.agent.perform(graph_agent.getName() + "@" + computer, "learnSkill", skill.getClasse(), from, new Boolean("false"), params);
-                            //			   this.agent.perform(graph_agent.getName()+"@"+computer,"addASkill",skill.getClasse(),new Boolean("false"),params);
+                            this.agent.perform(graph_agent.getName() + "@" + computer, "learnSkill", skill.getClasse(), from, Boolean.FALSE, params);
                         }
                     }
 

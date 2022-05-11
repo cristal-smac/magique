@@ -21,7 +21,7 @@ public class PlatformLauncher extends AbstractMagiqueMain {
                 for (int i = 0; i < args.length - 1; i++) {
                     theTrueArgs[i] = args[i - 1];
                 }
-                fr.lifl.magique.Start.go("fr.lifl.magique.PlatformLauncher", new Integer(args[0]).intValue(), theTrueArgs);
+                fr.lifl.magique.Start.go("fr.lifl.magique.PlatformLauncher", Integer.valueOf(args[0]).intValue(), theTrueArgs);
             } catch (Exception e) {
                 System.out.println("Impossible de lancer la platform");
                 e.printStackTrace();

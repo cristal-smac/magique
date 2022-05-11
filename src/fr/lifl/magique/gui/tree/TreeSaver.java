@@ -17,7 +17,7 @@ public class TreeSaver {
                 out.write("\n" + "FINDOMAIN" + "\n");
         } else if (noROOT) {
             out.write("\"" + root + "\" ");
-            out.write(new Integer(((ComputerNode) root).getPort()) + " ");
+            out.write(Integer.valueOf(((ComputerNode) root).getPort()) + " ");
         }
     }
 

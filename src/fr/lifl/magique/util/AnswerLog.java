@@ -24,9 +24,9 @@ public abstract class AnswerLog {
      */
     public void update(String answerer) {
         if (logInfo.containsKey(answerer)) {
-            logInfo.put(answerer, new Integer(((Integer) logInfo.get(answerer)).intValue() + 1));
+            logInfo.put(answerer, Integer.valueOf(logInfo.get(answerer)) + 1);
         } else {
-            logInfo.put(answerer, new Integer(1));
+            logInfo.put(answerer, Integer.valueOf(1));
         }
     }
 

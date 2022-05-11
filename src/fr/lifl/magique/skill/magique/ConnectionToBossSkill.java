@@ -109,8 +109,7 @@ public class ConnectionToBossSkill extends MagiqueDefaultSkill {
     public Integer pathLength(String agentName) {
         Request r = createQuestion("getName");
         ask(agentName, r);
-        //	return new Integer(3);
-        return new Integer(returnAnswer(r).getPathLength());
+        return Integer.valueOf(returnAnswer(r).getPathLength());
     }
 
 } // ConnectionToBossSkill

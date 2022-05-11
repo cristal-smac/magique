@@ -51,7 +51,7 @@ public class StartPlatform {
             Class c = myLoader.loadClass(platformClassName);
 
             Class[] argsClass = new Class[]{Integer.class};
-            p = c.getConstructor(argsClass).newInstance(new Integer(port));
+            p = c.getConstructor(argsClass).newInstance(Integer.valueOf(port));
 
         } catch (IllegalAccessException e) {
             e.printStackTrace();

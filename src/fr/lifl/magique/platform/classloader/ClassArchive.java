@@ -110,7 +110,7 @@ public class ClassArchive implements Serializable {
             int length = in.available();
             bytecode = new Byte[length];
             for (int i = 0; i < length; i++) {
-                bytecode[i] = new Byte((byte) in.read());
+                bytecode[i] = Byte.valueOf((byte) in.read());
             }
             in.close();
             loadClassType();

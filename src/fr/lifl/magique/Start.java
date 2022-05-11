@@ -66,7 +66,7 @@ public class Start {
 
         try {
             Object platform;
-            platform = Start.start(new Integer(port).intValue());
+            platform = Start.start(Integer.valueOf(port).intValue());
 
             BytecodeClassLoader myLoader = (BytecodeClassLoader) platform.getClass().getClassLoader();
             addPackageToExclude(myLoader);

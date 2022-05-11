@@ -1072,7 +1072,7 @@ public class MultiAgentsFrame extends JFrame {
             tport.addActionListener(new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
                     try {
-                        node.setPort((new Integer(tport.getText())).intValue());
+                        node.setPort((Integer.valueOf(tport.getText())).intValue());
                     } catch (NumberFormatException n) {
                     }
                     setVisible(false);
@@ -1087,7 +1087,7 @@ public class MultiAgentsFrame extends JFrame {
 
         public void setNode(ComputerNode node) {
             this.node = node;
-            tport.setText((new Integer(node.getPort())).toString());
+            tport.setText((Integer.valueOf(node.getPort())).toString());
         }
 
         public void getFocus() {
@@ -2175,11 +2175,11 @@ public class MultiAgentsFrame extends JFrame {
                     final JButton bsinit = new JButton(arg.getType());
                     VBSinit.add(bsinit);
                     final JTextField tsinit = new JTextField(arg.getValue());
-                    tsinit.setActionCommand(new Integer(compteur).toString());
+                    tsinit.setActionCommand(Integer.valueOf(compteur).toString());
                     tsinit.addActionListener(new ActionListener() {
                         public void actionPerformed(ActionEvent e) {
                             ((SkillDescriptor) liste.getSelectedValue()).setValueAt(tsinit.getText(),
-                                    new Integer(e.getActionCommand()).intValue());
+                                    Integer.valueOf(e.getActionCommand()).intValue());
                             AgentsTree.setRequestFocusEnabled(true);
                             AgentsTree.requestFocus();
                         }

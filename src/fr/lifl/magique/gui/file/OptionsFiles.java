@@ -150,7 +150,7 @@ public class OptionsFiles {
     public int getLookAndFeel() {
         try {
             option = options.getString("LookAndFeel");
-            return new Integer(option).intValue();
+            return Integer.valueOf(option).intValue();
         } catch (Throwable mre) {
             return 1;
         }
@@ -162,7 +162,7 @@ public class OptionsFiles {
     public boolean getShowAgentsTree() {
         try {
             option = options.getString("ShowAgentsTree");
-            return new Boolean(option).booleanValue();
+            return Boolean.valueOf(option).booleanValue();
         } catch (Throwable mre) {
             return true;
         }
@@ -171,7 +171,7 @@ public class OptionsFiles {
     public boolean getShowExecution() {
         try {
             option = options.getString("ShowExecution");
-            return new Boolean(option).booleanValue();
+            return Boolean.valueOf(option).booleanValue();
         } catch (Throwable mre) {
             return false;
         }
@@ -184,7 +184,7 @@ public class OptionsFiles {
     public boolean getShowComputers() {
         try {
             option = options.getString("ShowComputers");
-            return new Boolean(option).booleanValue();
+            return Boolean.valueOf(option).booleanValue();
         } catch (Throwable mre) {
             return true;
         }
@@ -193,7 +193,7 @@ public class OptionsFiles {
     public boolean getArrowMode() {
         try {
             option = options.getString("ReverseArrow");
-            return new Boolean(option).booleanValue();
+            return Boolean.valueOf(option).booleanValue();
         } catch (Throwable mre) {
             return false;
         }
@@ -206,7 +206,7 @@ public class OptionsFiles {
     public boolean getShowAgentsClasses() {
         try {
             option = options.getString("ShowAgentsClasses");
-            return new Boolean(option).booleanValue();
+            return Boolean.valueOf(option).booleanValue();
         } catch (Throwable mre) {
             return true;
         }
@@ -218,7 +218,7 @@ public class OptionsFiles {
     public boolean getShowAgentsProperties() {
         try {
             option = options.getString("ShowAgentsProperties");
-            return new Boolean(option).booleanValue();
+            return Boolean.valueOf(option).booleanValue();
         } catch (Throwable mre) {
             return true;
         }
@@ -230,7 +230,7 @@ public class OptionsFiles {
     public boolean getShowAgentIcons() {
         try {
             option = options.getString("ShowAgentIcons");
-            return new Boolean(option).booleanValue();
+            return Boolean.valueOf(option).booleanValue();
         } catch (Throwable mre) {
             return true;
         }
@@ -242,7 +242,7 @@ public class OptionsFiles {
     public boolean getSetDefaultIcons() {
         try {
             option = options.getString("SetDefaultIcons");
-            return new Boolean(option).booleanValue();
+            return Boolean.valueOf(option).booleanValue();
         } catch (Throwable mre) {
             return false;
         }
@@ -254,7 +254,7 @@ public class OptionsFiles {
     public boolean getSetSmallsIcons() {
         try {
             option = options.getString("SetSmallsIcons");
-            return new Boolean(option).booleanValue();
+            return Boolean.valueOf(option).booleanValue();
         } catch (Throwable mre) {
             return false;
         }
@@ -266,7 +266,7 @@ public class OptionsFiles {
     public boolean getShowAgentName() {
         try {
             option = options.getString("ShowAgentName");
-            return new Boolean(option).booleanValue();
+            return Boolean.valueOf(option).booleanValue();
         } catch (Throwable mre) {
             return true;
         }
@@ -406,7 +406,7 @@ public class OptionsFiles {
         int[] v = new int[3];
         StringTokenizer tokenizer = new StringTokenizer(StringList, " ");
         while (tokenizer.hasMoreTokens())
-            v[i++] = (new Integer(tokenizer.nextToken())).intValue();
+            v[i++] = (Integer.valueOf(tokenizer.nextToken())).intValue();
         return new Color(v[0], v[1], v[2]);
     }
 
@@ -418,7 +418,7 @@ public class OptionsFiles {
         int[] v = new int[4];
         StringTokenizer tokenizer = new StringTokenizer(StringList, " ");
         while (tokenizer.hasMoreTokens())
-            v[i++] = (new Integer(tokenizer.nextToken())).intValue();
+            v[i++] = (Integer.valueOf(tokenizer.nextToken())).intValue();
         return v;
     }
 

@@ -87,7 +87,7 @@ public class Request
     public Request(String sender, boolean isQuestion, String text) {
         this.text = text;
         this.name = sender + "-" + cpt++;
-        this.isQuestion = new Boolean(isQuestion);
+        this.isQuestion = Boolean.valueOf(isQuestion);
         addToPath(sender);
     }
 
@@ -105,7 +105,7 @@ public class Request
         for (int i = 0; i < params.length; i++)
             this.params[i] = params[i];
         this.name = sender + "-" + cpt++;
-        this.isQuestion = new Boolean(isQuestion);
+        this.isQuestion = Boolean.valueOf(isQuestion);
         addToPath(sender);
     }
 
