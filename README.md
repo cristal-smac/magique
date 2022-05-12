@@ -178,7 +178,7 @@ Sélectionnez *Show* puis "Console Tools". Dans la fenêtre qui s'ouvre saisisse
 
 et validez pour observer l'exécution. Il est possible d'interrompre l'exécution à l'aide du menu `kill` de la fenêtre `Exécution`.
 
->   Merci à Hippolyte Damay--Glorieux pour son travail d'actualisation des biblioithèques de gestion des *`Classloader`* qui permet l'utilisation des versions récentes du SDK.
+>   Merci à *Hippolyte Damay--Glorieux* pour son travail d'actualisation des biblioithèques de gestion des *`Classloader`* qui permet l'utilisation des versions récentes du SDK.
 
 ## Bilbiographie
  * Philippe Mathieu, Jean-Christophe Routier, Yann Secq. [RIO: Roles, Interactions and Organizations](./publis/ceemas03-final.pdf). Proceedings of the 3rd International/Central and Eastern European Conference on Multi-Agent Systems (CEEMAS 2003), 2003, undef, France. pp.147--157. [hal-00731975]
