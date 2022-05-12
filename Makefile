@@ -27,7 +27,6 @@ compile:
 
 #création du jar
 jar:    init build
-	cd src; jar cf $(SOURCE_JAR) fr $(JAR_LIBS)
 	cd classes; jar cfm $(MAGIQUE_JAR) $(MAGIQUE_MANIFEST)  fr/lifl/magique/*.class fr/lifl/magique/agent fr/lifl/magique/platform fr/lifl/magique/util fr/lifl/magique/skill fr/lifl/magique/policy fr/lifl/magique/PlatformLauncher.class fr/lifl/magique/gui/skills $(JAR_LIBS)
 	cd classes; jar cfm $(MAGIQUE_GUI_JAR) $(MAGIQUE_GUI_MANIFEST) fr/lifl/magique $(JAR_LIBS) bsh
 
